@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, Download, Send, Video, Cpu, ShieldCheck, Radio } from "lucide-react";
 import { coreFeatures, showcaseStats, telegramUrl } from "../mock";
 import ProjectsSection from "../components/ProjectsSection";
+import FeedbackSection from "../components/FeedbackSection";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -11,13 +12,26 @@ const Home = () => {
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="grid-bg absolute inset-0 opacity-60" />
-        <div className="radial-red absolute inset-0" />
+        <video
+          className="hero-video"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/kenny-logo.jpg"
+        >
+          <source src="/cyber-city.mp4" type="video/mp4" />
+        </video>
+        <div className="hero-video-overlay" />
+        <div className="grid-bg absolute inset-0 opacity-30" />
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-20 md:pb-32 md:pt-28">
           <div className="animate-float-up">
-            <p className="font-mono2 text-xs uppercase tracking-[0.3em] text-red-500">Kenny system / 01</p>
-            <h1 className="mt-5 font-display text-5xl font-bold leading-[0.95] tracking-tight md:text-8xl">
-              Kenny<span className="text-red-500 text-glow-red">PvtHax</span>
+            <div className="flex items-center gap-3">
+              <img src="/kenny-logo.jpg" alt="KennyPvtHax" className="h-12 w-12 rounded-lg border border-red-600/50 object-cover shadow-lg shadow-red-900/40" />
+              <p className="font-mono2 text-xs uppercase tracking-[0.3em] text-red-500 animate-flicker">Kenny system / 01</p>
+            </div>
+            <h1 className="mt-5 font-display text-6xl font-bold leading-[0.9] tracking-tight md:text-8xl lg:text-9xl">
+              <span className="animated-name">KennyPvtHax</span>
             </h1>
             <p className="mt-4 font-tech text-lg text-zinc-400 md:text-2xl">
               Kernel-level capability for PUBGM &amp; BGMI. Stable operation. Instant delivery.
@@ -140,6 +154,9 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* FEEDBACK */}
+      <FeedbackSection />
 
       {/* CTA */}
       <section className="relative overflow-hidden border-t border-zinc-800/80 py-20 md:py-28">

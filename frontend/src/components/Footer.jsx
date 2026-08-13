@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Zap, Send } from "lucide-react";
-import { navLinks, telegramHandle, telegramUrl } from "../mock";
+import { Send, User } from "lucide-react";
+import { navLinks, telegramHandle, telegramUrl, ownerHandle, ownerUrl, logoSrc } from "../mock";
 
 const Footer = () => {
   return (
@@ -10,25 +10,25 @@ const Footer = () => {
       <div className="relative mx-auto max-w-7xl px-6 py-14">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center border border-red-600/60 bg-red-600/10 clip-corner">
-                <Zap className="h-4 w-4 text-red-500" fill="currentColor" />
-              </span>
+            <div className="flex items-center gap-2.5">
+              <img src={logoSrc} alt="KennyPvtHax" className="h-9 w-9 rounded-md border border-red-600/50 object-cover" />
               <span className="font-display text-lg font-bold">
                 Kenny<span className="text-red-500">PvtHax</span>
               </span>
             </div>
             <p className="mt-4 max-w-sm text-sm text-zinc-500">
-              Premium PUBG Mobile & BGMI plugins. Kernel-level capability, stable operation and instant key delivery via Telegram.
+              Premium PUBG Mobile &amp; BGMI plugins. Kernel-level capability, stable operation and instant key delivery via Telegram.
             </p>
-            <a
-              href={telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center gap-2 border border-red-600/50 bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-600/20 transition-colors clip-corner"
-            >
-              <Send className="h-4 w-4" /> {telegramHandle}
-            </a>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a href={telegramUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 border border-red-600/50 bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-600/20 transition-colors clip-corner">
+                <Send className="h-4 w-4" /> {telegramHandle}
+              </a>
+              <a href={ownerUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-300 hover:border-red-600/60 hover:text-white transition-colors clip-corner">
+                <User className="h-4 w-4 text-red-500" /> Owner {ownerHandle}
+              </a>
+            </div>
           </div>
 
           <div>

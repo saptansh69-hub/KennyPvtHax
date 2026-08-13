@@ -101,5 +101,8 @@ export const faqs = [
   { q: "What payment methods do you accept?", a: "We accept UPI (India) and Stripe card payments (international). More options coming soon." },
 ];
 
-export const telegramHandle = "@KennyPvtHax";
-export const telegramUrl = "https://t.me/KennyPvtHax";
+export const telegramHandle = "@KennyPvtHacks";
+export const telegramUrl = "https://t.me/KennyPvtHacks";
+export const ownerHandle = "@CrimeCell";
+export const ownerUrl = "https://t.me/CrimeCell";
+export const logoSrc = "/kenny-logo.jpg";

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, ShoppingCart, Send, CreditCard, Smartphone, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Trash2, ShoppingCart, Send, CreditCard, Smartphone, ArrowRight, CheckCircle2, ShieldCheck, Loader2, Copy, Check } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../hooks/use-toast";
+import { api } from "../services/api";
 
 const Checkout = () => {
   const { items, removeItem, totalInr, totalUsd, clearCart } = useCart();
@@ -14,36 +15,84 @@ const Checkout = () => {
   const [telegram, setTelegram] = useState("");
   const [email, setEmail] = useState("");
   const [placed, setPlaced] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [order, setOrder] = useState(null);
+  const [copied, setCopied] = useState("");
 
   const total = currency === "inr" ? `₹${totalInr}` : `$${totalUsd}`;
 
-  const handlePlace = (e) => {
+  const copyKey = (key) => {
+    navigator.clipboard?.writeText(key);
+    setCopied(key);
+    setTimeout(() => setCopied(""), 1500);
+  };
+
+  const handlePlace = async (e) => {
     e.preventDefault();
     if (!telegram.trim()) {
       toast({ title: "Telegram username required", description: "We deliver your key on Telegram." });
       return;
     }
-    // Frontend-only mock: pretend payment succeeded
-    setPlaced(true);
-    clearCart();
+    setBusy(true);
+    try {
+      const payload = {
+        telegram: telegram.trim(),
+        email: email.trim() || undefined,
+        method,
+        currency,
+        items: items.map((i) => ({
+          projectId: i.projectId, project: i.project, planId: i.planId,
+          plan: i.plan, duration: i.duration, inr: i.inr, usd: i.usd,
+        })),
+      };
+      const res = await api.post("/orders", payload);
+      setOrder(res.data);
+      setPlaced(true);
+      clearCart();
+    } catch (err) {
+      toast({ title: "Checkout failed", description: err?.response?.data?.detail || "Please try again." });
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (placed) {
     return (
-      <div className="mx-auto max-w-lg px-6 py-24 text-center">
+      <div className="mx-auto max-w-xl px-6 py-20 text-center">
         <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border border-green-600/50 bg-green-600/10">
           <CheckCircle2 className="h-8 w-8 text-green-400" />
         </div>
-        <h1 className="mt-6 font-display text-3xl font-bold">Order placed</h1>
+        <h1 className="mt-6 font-display text-3xl font-bold">Order confirmed</h1>
         <p className="mt-3 text-sm text-zinc-500">
-          Your key will be delivered to <span className="text-red-400">{telegram}</span> on Telegram shortly.
+          Your key{order?.keys?.length > 1 ? "s" : ""} will be delivered to <span className="text-red-400">{order?.telegram || telegram}</span> on Telegram.
         </p>
+
+        {order?.keys?.length > 0 && (
+          <div className="mt-6 space-y-2 text-left">
+            {order.keys.map((k, i) => (
+              <div key={i} className="flex flex-wrap items-center justify-between gap-3 border border-zinc-800 bg-zinc-950 p-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">{k.project}</p>
+                  <p className="font-mono2 text-xs text-zinc-500">{k.plan} · {k.duration}</p>
+                </div>
+                <button onClick={() => copyKey(k.key)}
+                  className="inline-flex items-center gap-2 border border-red-900/50 bg-red-600/10 px-3 py-1.5 font-mono2 text-xs text-red-300 hover:bg-red-600/20 transition-colors">
+                  {copied === k.key ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} {k.key}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="mt-4 inline-block border border-yellow-600/40 bg-yellow-950/20 px-4 py-2 font-mono2 text-xs text-yellow-500/90">
-          Demo checkout — payment & delivery are mocked for now
+          Payment is mocked — real UPI/Stripe & Telegram bot delivery coming soon
         </div>
-        <div className="mt-8">
-          <button onClick={() => navigate("/")} className="inline-flex items-center gap-2 bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors clip-corner">
-            Back home <ArrowRight className="h-4 w-4" />
+        <div className="mt-8 flex justify-center gap-3">
+          <button onClick={() => navigate("/account")} className="inline-flex items-center gap-2 bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors clip-corner">
+            View in account <ArrowRight className="h-4 w-4" />
+          </button>
+          <button onClick={() => navigate("/")} className="inline-flex items-center gap-2 border border-zinc-700 px-6 py-3 text-sm font-semibold text-white hover:border-red-600/60 transition-colors clip-corner">
+            Back home
           </button>
         </div>
       </div>
@@ -159,8 +208,8 @@ const Checkout = () => {
               ))}
             </div>
 
-            <button type="submit" className="mt-7 inline-flex w-full items-center justify-center gap-2 bg-red-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors clip-corner">
-              Pay {total} <ArrowRight className="h-4 w-4" />
+            <button type="submit" disabled={busy} className="mt-7 inline-flex w-full items-center justify-center gap-2 bg-red-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-60 clip-corner">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Pay {total} <ArrowRight className="h-4 w-4" />
             </button>
             <p className="mt-3 flex items-center justify-center gap-1.5 font-mono2 text-[11px] text-zinc-600">
               <ShieldCheck className="h-3.5 w-3.5" /> Payment is mocked in this preview

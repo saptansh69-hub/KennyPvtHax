@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "./components/ui/toaster";
 import StatusBar from "./components/StatusBar";
 import Navbar from "./components/Navbar";
@@ -11,6 +12,7 @@ import Pricing from "./pages/Pricing";
 import Features from "./pages/Features";
 import Download from "./pages/Download";
 import Checkout from "./pages/Checkout";
+import Account from "./pages/Account";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -23,24 +25,27 @@ const ScrollToTop = () => {
 function App() {
   return (
     <div className="App">
-      <CartProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <StatusBar />
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/features" element={<Features />} />
-              <Route path="/download" element={<Download />} />
-              <Route path="/checkout" element={<Checkout />} />
-            </Routes>
-          </main>
-          <Footer />
-          <Toaster />
-        </BrowserRouter>
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <StatusBar />
+            <Navbar />
+            <main>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/features" element={<Features />} />
+                <Route path="/download" element={<Download />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/account" element={<Account />} />
+              </Routes>
+            </main>
+            <Footer />
+            <Toaster />
+          </BrowserRouter>
+        </CartProvider>
+      </AuthProvider>
     </div>
   );
 }
