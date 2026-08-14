@@ -25,10 +25,10 @@ export const projects = [
     tagline: "The market standard",
     description:
       "Featuring the market's most common UI. Clean, reliable and battle-tested — everything a player expects with rock-solid stability.",
-    image:
-      "https://images.unsplash.com/photo-1590845947376-2638caa89309?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwzfHxtb2JpbGUlMjBnYW1pbmd8ZW58MHx8fHJlZHwxNzg2NjU2OTk1fDA&ixlib=rb-4.1.0&q=85",
+    image: "/og-cheats.jpg",
+    demoVideo: "",
     features: ["Aimbot & ESP", "Standard menu UI", "Stable runtime", "Anti-ban base"],
-    accent: "#ff3b3b",
+    accent: "#7fff00",
     hasAdmin: false,
   },
   {
@@ -38,10 +38,10 @@ export const projects = [
     tagline: "Advanced & stream-safe",
     description:
       "An advanced version of the UI with the ability to hide ESP while recording. Built for creators who need to stay invisible on stream.",
-    image:
-      "https://images.unsplash.com/photo-1650765814764-aeae1a900dfa?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjh8MHwxfHNlYXJjaHwxfHxkYXJrJTIwZXNwb3J0c3xlbnwwfHx8cmVkfDE3ODY2NTY5OTV8MA&ixlib=rb-4.1.0&q=85",
+    image: "/frozen-fire.jpg",
+    demoVideo: "",
     features: ["Hide ESP while recording", "Advanced UI", "Stream mode", "Priority updates"],
-    accent: "#ff5a1f",
+    accent: "#2fa8ff",
     hasAdmin: false,
   },
   {
@@ -51,8 +51,8 @@ export const projects = [
     tagline: "True potential — demo only",
     description:
       "The best of all. A display of true potential and power, only for those who want to prove they are the best. Gives all imaginary powers to beat other hackers — strictly for demonstration and fun purposes.",
-    image:
-      "https://images.unsplash.com/photo-1558008258-7ff8888b42b0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwzfHxlc3BvcnRzfGVufDB8fHxibGFja3wxNzg2NjU3MDAxfDA&ixlib=rb-4.1.0&q=85",
+    image: "/kenny-admin.webp",
+    demoVideo: "",
     features: ["God-tier control", "Anti-hacker override", "Demonstration mode", "Exclusive access"],
     accent: "#e50914",
     hasAdmin: true,

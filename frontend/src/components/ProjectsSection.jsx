@@ -28,13 +28,13 @@ const ProjectsSection = () => {
               className="tech-card group relative flex flex-col overflow-hidden"
               style={{ animation: `float-up 0.6s ease ${idx * 0.1}s both` }}
             >
-              <div className="relative h-52 overflow-hidden">
+              <div className="relative h-52 overflow-hidden bg-black">
                 <img
                   src={p.image}
                   alt={p.name}
-                  className="h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105 group-hover:opacity-90"
+                  className="h-full w-full object-contain p-6 transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                 <div className="absolute left-4 top-4 flex items-center gap-2">
                   <span className="font-mono2 text-xs text-zinc-400">/ {p.code}</span>
                   {p.hasAdmin && (

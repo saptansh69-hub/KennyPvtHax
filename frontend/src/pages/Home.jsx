@@ -1,8 +1,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, KeyRound, Send, Video, Cpu, ShieldCheck, Radio } from "lucide-react";
+import { ArrowRight, KeyRound, Send, Cpu, ShieldCheck, Radio, Video } from "lucide-react";
 import { coreFeatures, showcaseStats, telegramUrl } from "../mock";
 import ProjectsSection from "../components/ProjectsSection";
+import DemosSection from "../components/DemosSection";
 import FeedbackSection from "../components/FeedbackSection";
 
 const Home = () => {
@@ -89,31 +90,8 @@ const Home = () => {
       {/* PROJECTS */}
       <ProjectsSection />
 
-      {/* VIDEO SHOWCASE (placeholder, to be added later) */}
-      <section className="relative border-t border-zinc-800/80 py-20 md:py-28">
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="text-center">
-            <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">Gameplay / showcase</p>
-            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-5xl">See it in action</h2>
-            <p className="mx-auto mt-4 max-w-lg text-sm text-zinc-500">
-              A short gameplay reel to build trust with new players. Coming soon.
-            </p>
-          </div>
-          <div className="mt-10 overflow-hidden border border-zinc-800 bg-zinc-900/40">
-            <div className="relative flex aspect-video w-full items-center justify-center">
-              <div className="grid-bg absolute inset-0 opacity-40" />
-              <div className="radial-red absolute inset-0 opacity-70" />
-              <div className="relative flex flex-col items-center">
-                <span className="grid h-16 w-16 place-items-center rounded-full border border-red-600/60 bg-red-600/15">
-                  <Video className="h-7 w-7 text-red-500" />
-                </span>
-                <p className="mt-4 font-tech text-lg text-zinc-300">Gameplay video coming soon</p>
-                <p className="font-mono2 text-xs text-zinc-600">/ reel slot reserved</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* PER-PROJECT DEMOS */}
+      <DemosSection />
 
       {/* CORE FEATURES */}
       <section className="relative border-t border-zinc-800/80 py-20 md:py-28">
