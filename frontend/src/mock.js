@@ -26,7 +26,7 @@ export const projects = [
     description:
       "Featuring the market's most common UI. Clean, reliable and battle-tested — everything a player expects with rock-solid stability.",
     image: "/og-cheats.jpg",
-    demoVideo: "",
+    demoVideo: "https://youtu.be/haxLwKBHczk",
     features: ["Aimbot & ESP", "Standard menu UI", "Stable runtime", "Anti-ban base"],
     accent: "#7fff00",
     hasAdmin: false,
@@ -39,7 +39,7 @@ export const projects = [
     description:
       "An advanced version of the UI with the ability to hide ESP while recording. Built for creators who need to stay invisible on stream.",
     image: "/frozen-fire.jpg",
-    demoVideo: "",
+    demoVideo: "https://youtu.be/vZdVazJzRAk",
     features: ["Hide ESP while recording", "Advanced UI", "Stream mode", "Priority updates"],
     accent: "#2fa8ff",
     hasAdmin: false,
@@ -52,7 +52,7 @@ export const projects = [
     description:
       "The best of all. A display of true potential and power, only for those who want to prove they are the best. Gives all imaginary powers to beat other hackers — strictly for demonstration and fun purposes.",
     image: "/kenny-admin.webp",
-    demoVideo: "",
+    demoVideo: "https://youtu.be/oZnN0pWfRdU",
     features: ["God-tier control", "Anti-hacker override", "Demonstration mode", "Exclusive access"],
     accent: "#e50914",
     hasAdmin: true,
@@ -106,3 +106,7 @@ export const telegramUrl = "https://t.me/KennyPvtHacks";
 export const ownerHandle = "@CrimeCell";
 export const ownerUrl = "https://t.me/CrimeCell";
 export const logoSrc = "/kenny-logo.jpg";
+
+// Video links
+export const heroBgVideo = "https://youtu.be/COa9LDmZBzs"; // cyberpunk background
+export const featuredShowcaseVideo = "https://youtu.be/T63ZwaEUPCw"; // main gameplay reel
