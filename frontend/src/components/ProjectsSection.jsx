@@ -25,7 +25,7 @@ const ProjectsSection = () => {
           {projects.map((p, idx) => (
             <div
               key={p.id}
-              className="group relative flex flex-col overflow-hidden border border-zinc-800 bg-zinc-900/40 transition-all duration-300 hover:border-red-600/60"
+              className="tech-card group relative flex flex-col overflow-hidden"
               style={{ animation: `float-up 0.6s ease ${idx * 0.1}s both` }}
             >
               <div className="relative h-52 overflow-hidden">

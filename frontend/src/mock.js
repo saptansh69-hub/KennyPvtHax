@@ -4,7 +4,7 @@ export const serverStatus = {
   status: "ONLINE",
   statusLabel: "All systems operational",
   lastPatch: "2025-07-14T09:32:00Z",
-  version: "v4.7.2",
+  version: "V-4.5",
   undetected: true,
   activeUsers: 2847,
 };
@@ -14,7 +14,7 @@ export const navLinks = [
   { label: "Projects", to: "/#projects" },
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
-  { label: "Download", to: "/download" },
+  { label: "Reviews", to: "/#feedback" },
 ];
 
 export const projects = [

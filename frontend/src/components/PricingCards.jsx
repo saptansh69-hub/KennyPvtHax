@@ -71,10 +71,8 @@ const PricingCards = () => {
                 {product.plans.map((plan) => (
                   <div
                     key={plan.id}
-                    className={`relative flex flex-col border p-6 transition-all duration-300 clip-corner ${
-                      plan.popular
-                        ? "border-red-600/70 bg-red-600/5"
-                        : "border-zinc-800 bg-zinc-900/40 hover:border-zinc-700"
+                    className={`tech-card relative flex flex-col p-6 clip-corner ${
+                      plan.popular ? "shadow-[0_0_0_1px_rgba(229,9,20,0.65)]" : ""
                     }`}
                   >
                     {plan.popular && (

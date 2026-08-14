@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Download, Send, Video, Cpu, ShieldCheck, Radio } from "lucide-react";
+import { ArrowRight, KeyRound, Send, Video, Cpu, ShieldCheck, Radio } from "lucide-react";
 import { coreFeatures, showcaseStats, telegramUrl } from "../mock";
 import ProjectsSection from "../components/ProjectsSection";
 import FeedbackSection from "../components/FeedbackSection";
@@ -26,14 +26,11 @@ const Home = () => {
         <div className="grid-bg absolute inset-0 opacity-30" />
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-20 md:pb-32 md:pt-28">
           <div className="animate-float-up">
-            <div className="flex items-center gap-3">
-              <img src="/kenny-logo.jpg" alt="KennyPvtHax" className="h-12 w-12 rounded-lg border border-red-600/50 object-cover shadow-lg shadow-red-900/40" />
-              <p className="font-mono2 text-xs uppercase tracking-[0.3em] text-red-500 animate-flicker">Kenny system / 01</p>
-            </div>
-            <h1 className="mt-5 font-display text-6xl font-bold leading-[0.9] tracking-tight md:text-8xl lg:text-9xl">
-              <span className="animated-name">KennyPvtHax</span>
+            <img src="/kenny-logo.jpg" alt="KennyPvtHax" className="h-14 w-14 rounded-lg border border-red-600/50 object-cover shadow-lg shadow-red-900/40" />
+            <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] tracking-tight md:text-7xl lg:text-8xl">
+              <span className="name-wrap"><span className="animated-name">KennyPvtHax</span></span>
             </h1>
-            <p className="mt-4 font-tech text-lg text-zinc-400 md:text-2xl">
+            <p className="mt-6 font-tech text-lg text-zinc-400 md:text-2xl">
               Kernel-level capability for PUBGM &amp; BGMI. Stable operation. Instant delivery.
             </p>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-500 md:text-base">
@@ -42,10 +39,10 @@ const Home = () => {
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button
-                onClick={() => navigate("/download")}
+                onClick={() => navigate("/pricing")}
                 className="group inline-flex items-center gap-2 bg-red-600 px-6 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 clip-corner"
               >
-                <Download className="h-4 w-4" /> Download now
+                <KeyRound className="h-4 w-4" /> Get your key
               </button>
               <button
                 onClick={() => navigate("/pricing")}
@@ -74,11 +71,13 @@ const Home = () => {
             ].map((s, i) => (
               <div
                 key={s.label}
-                className="relative border border-zinc-800 bg-zinc-900/50 p-5 scanline clip-corner"
+                className="tech-card group p-5 clip-corner"
                 style={{ animation: `float-up 0.6s ease ${0.2 + i * 0.08}s both` }}
               >
-                <s.icon className="h-5 w-5 text-red-500" />
-                <p className="mt-3 font-mono2 text-[11px] uppercase tracking-widest text-zinc-500">{s.label}</p>
+                <span className="grid h-10 w-10 place-items-center border border-red-600/40 bg-red-600/10 transition-colors group-hover:bg-red-600/20">
+                  <s.icon className="h-5 w-5 text-red-500" />
+                </span>
+                <p className="mt-4 font-mono2 text-[11px] uppercase tracking-widest text-zinc-500">{s.label}</p>
                 <p className="mt-1 font-display text-xl font-bold text-white">{s.value}</p>
                 <p className="text-xs text-zinc-500">{s.sub}</p>
               </div>
@@ -134,11 +133,14 @@ const Home = () => {
             </button>
           </div>
 
-          <div className="mt-14 grid gap-px overflow-hidden border border-zinc-800 bg-zinc-800 sm:grid-cols-2 lg:grid-cols-3">
-            {coreFeatures.map((f) => (
-              <div key={f.code} className="group bg-zinc-950 p-8 transition-colors hover:bg-zinc-900">
-                <span className="font-mono2 text-sm text-red-500">{f.code}</span>
-                <h3 className="mt-3 font-display text-xl font-bold text-white">{f.title}</h3>
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {coreFeatures.map((f, i) => (
+              <div key={f.code} className="tech-card group p-8 clip-corner" style={{ animation: `float-up 0.6s ease ${i * 0.06}s both` }}>
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-3xl font-bold text-red-600/30 transition-colors group-hover:text-red-600/70">{f.code}</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-600 opacity-40 transition-opacity group-hover:opacity-100" />
+                </div>
+                <h3 className="mt-4 font-display text-xl font-bold text-white">{f.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-500">{f.desc}</p>
               </div>
             ))}

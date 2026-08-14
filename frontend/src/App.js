@@ -10,7 +10,6 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
 import Features from "./pages/Features";
-import Download from "./pages/Download";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
 
@@ -36,7 +35,6 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/features" element={<Features />} />
-                <Route path="/download" element={<Download />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/account" element={<Account />} />
               </Routes>

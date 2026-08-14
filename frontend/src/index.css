@@ -127,6 +127,36 @@ code, .mono {
   animation: name-shimmer 6s linear infinite, name-glow 3s ease-in-out infinite;
 }
 
+/* Name wrapper with diagonal light sweep + baseline glow bar */
+.name-wrap { position: relative; display: inline-block; }
+.name-wrap::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -10px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ff3b3b, #e50914, #ff3b3b, transparent);
+  filter: drop-shadow(0 0 8px rgba(255,59,59,0.9));
+  animation: bar-pulse 3s ease-in-out infinite;
+}
+.name-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%);
+  mix-blend-mode: overlay;
+  transform: translateX(-120%);
+  animation: name-sweep 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes name-sweep {
+  0%, 100% { transform: translateX(-120%); }
+  55%, 70% { transform: translateX(120%); }
+}
+@keyframes bar-pulse {
+  0%, 100% { opacity: 0.5; transform: scaleX(0.85); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
 @keyframes flicker {
   0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
   20%, 24%, 55% { opacity: 0.55; }
@@ -150,6 +180,44 @@ code, .mono {
     radial-gradient(ellipse 70% 60% at 50% 40%, rgba(229,9,20,0.28), transparent 70%),
     linear-gradient(180deg, rgba(8,8,10,0.55) 0%, rgba(8,8,10,0.8) 60%, #08080a 100%);
 }
+
+/* Appealing tech card */
+.tech-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(229,9,20,0.12), transparent 45%),
+    linear-gradient(160deg, rgba(24,24,27,0.85), rgba(11,11,13,0.9));
+  border: 1px solid rgba(255,59,59,0.14);
+  transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.tech-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #e50914, #ff5a1f, transparent);
+  transform: scaleX(0.35);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+.tech-card::after {
+  content: '';
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 10px; height: 10px;
+  border-top: 1px solid rgba(255,59,59,0.5);
+  border-right: 1px solid rgba(255,59,59,0.5);
+  opacity: 0.6;
+  transition: opacity 0.35s ease;
+}
+.tech-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(255,59,59,0.55);
+  box-shadow: 0 18px 40px -18px rgba(229,9,20,0.6), inset 0 0 24px rgba(229,9,20,0.06);
+}
+.tech-card:hover::before { transform: scaleX(1); }
+.tech-card:hover::after { opacity: 1; }
 
 ::selection { background: rgba(229,9,20,0.4); color: #fff; }
 
