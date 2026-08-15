@@ -369,6 +369,90 @@ backend:
         agent: "testing"
         comment: "Password reset flow working correctly. POST /api/auth/forgot with valid identifier (email or telegram) returns found=true and reset_token. Nonexistent identifier returns found=false with no token. POST /api/auth/reset with valid token updates password and returns JWT token. Old password no longer works (401), new password works (200). Reset token can only be used once (400 on reuse). Bogus token returns 400. Password validation enforced (< 6 chars returns 400). Telegram identifier works with and without @ prefix. All 20 tests passed."
 
+  - task: "Config endpoint with Telegram integration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/config returns telegram_enabled=true and bot_username='kennypvthaxhelpbot'. Telegram bot is properly configured and webhook registered. Tested successfully."
+
+  - task: "Admin key inventory - bulk upload"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/admin/keys/bulk working correctly. Admin can upload keys with projectId/planId or without (uncategorized). First upload of KENNY-OG1-AAAA and KENNY-OG1-BBBB returned added=2, skipped=0. Second upload of same keys returned added=0, skipped=2 (deduplication working). Uncategorized key GLOBAL-KEY-1 uploaded successfully. Non-admin returns 403, no token returns 403. All 5 tests passed."
+
+  - task: "Admin key summary endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/keys/summary working correctly. Returns buckets array with projectId|planId groupings, available and used counts. og|1day bucket shows available=2, any|any bucket shows available=1 (uncategorized). total_available=3 reflects correct count. Non-admin returns 403, no token returns 403. All 6 tests passed."
+
+  - task: "Order key assignment from inventory"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/orders with key inventory assignment working correctly. Order 1 (og|1day) assigned KENNY-OG1-AAAA from matching bucket, source='inventory', stock_ok=true, delivered=false. Order 2 (og|1day) assigned KENNY-OG1-BBBB. Order 3 (og|1day) fell back to GLOBAL-KEY-1 from uncategorized bucket when og|1day exhausted. Order 4 (og|1day) returned key=null, source='pending', stock_ok=false when all keys exhausted. All orders include telegram_deeplink with format 'https://t.me/kennypvthaxhelpbot?start={order_id}' and bot_username='kennypvthaxhelpbot'. All 13 tests passed."
+
+  - task: "GET /api/orders/me with Telegram delivery info"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/orders/me returns authenticated user's orders with telegram_deeplink and bot_username fields. Tested with admin token, returned orders array with correct fields. All 4 tests passed."
+
+  - task: "Telegram webhook simulation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/telegram/webhook working correctly. Webhook with /start (no payload) returns 200 with ok=true, stores chat mapping. Webhook with /start {order_id} returns 200 with ok=true, processes order delivery. All 4 tests passed."
+
+  - task: "KeyAuth endpoint removal (regression)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Regression testing passed. Auth endpoints (signup/login/me) working correctly. Feedback endpoints (GET/POST) working correctly. POST /api/admin/keyauth/generate correctly returns 404 (endpoint removed). All 6 tests passed."
+
 frontend:
   - task: "Frontend UI"
     implemented: true
@@ -385,12 +469,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: false
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and working including admin by email and password reset flow"
+    - "All backend endpoints tested and working including KeyAuth removal, key inventory system, and Telegram delivery integration"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -402,3 +486,5 @@ agent_communication:
     message: "Completed testing of NEW/CHANGED endpoints. All 39 tests passed (100% success rate). Tested: GET /api/config (keyauth_enabled and telegram_enabled flags), admin access control (is_admin flag based on ADMIN_TELEGRAMS env), all admin endpoints (stats/orders/feedback/delete/keyauth), orders with planId values and local key fallback, feedback with image support and validation. All new features working correctly. Backend fully functional with graceful fallbacks when KeyAuth and Telegram not configured."
   - agent: "testing"
     message: "Completed testing of NEWEST additions. All 28 tests passed (100% success rate). Tested: (1) Admin by email - ADMIN_EMAILS env correctly grants admin access to saptanshtesting@gmail.com, is_admin=true returned, admin endpoints work (200) and fail for non-admin (403). (2) Password reset flow - POST /api/auth/forgot returns found=true/false with reset_token for valid users, POST /api/auth/reset updates password with valid token, old password fails (401), new password works (200), token reuse blocked (400), bogus token fails (400), password validation enforced (< 6 chars = 400), telegram identifier works with/without @. All backend features fully functional."
+  - agent: "testing"
+    message: "Completed testing of KeyAuth removal + Key Inventory + Telegram Delivery integration. All 45 tests passed (100% success rate). Tested: (1) GET /api/config returns telegram_enabled=true and bot_username='kennypvthaxhelpbot'. (2) Admin key inventory - POST /api/admin/keys/bulk adds keys with projectId/planId or uncategorized, deduplication working (added=2/0, skipped=0/2), non-admin returns 403. (3) GET /api/admin/keys/summary returns buckets (og|1day available=2, any|any available=1), total_available=3, non-admin returns 403. (4) Order key assignment - orders assigned keys from matching bucket (KENNY-OG1-AAAA, KENNY-OG1-BBBB), then fallback to uncategorized (GLOBAL-KEY-1), then null when exhausted (source='pending', stock_ok=false). All orders include telegram_deeplink and bot_username. (5) GET /api/orders/me returns orders with telegram_deeplink and bot_username. (6) POST /api/telegram/webhook handles /start and /start {order_id}, returns ok=true. (7) Regression - auth endpoints work, feedback endpoints work, /api/admin/keyauth/generate returns 404 (removed). All backend features fully functional."

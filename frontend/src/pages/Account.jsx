@@ -101,9 +101,17 @@ const Account = () => {
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 flex items-center gap-1.5 font-mono2 text-[11px] text-zinc-600">
-                  <Send className="h-3.5 w-3.5" /> Delivered to {o.telegram} on Telegram
-                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 font-mono2 text-[11px] text-zinc-600">
+                    <Send className="h-3.5 w-3.5" /> {o.delivered ? `Delivered to ${o.telegram} on Telegram` : `For ${o.telegram}`}
+                  </p>
+                  {o.telegram_deeplink && (
+                    <a href={o.telegram_deeplink} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 border border-red-900/50 bg-red-600/10 px-3 py-1.5 font-mono2 text-[11px] text-red-300 hover:bg-red-600/20 transition-colors">
+                      <Send className="h-3 w-3" /> Get on Telegram
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>

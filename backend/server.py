@@ -1,13 +1,12 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 import os
 import asyncio
 import logging
-import random
 import secrets
-import string
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -20,7 +19,6 @@ import requests
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
@@ -29,18 +27,14 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-secret')
 JWT_ALGO = 'HS256'
 JWT_EXP_DAYS = 30
 
-# Third-party config (safe fallbacks when unset)
-KEYAUTH_SELLER_KEY = os.environ.get('KEYAUTH_SELLER_KEY', '').strip()
-KEYAUTH_MASK = os.environ.get('KEYAUTH_MASK', 'KENNY-******-******').strip()
-KEYAUTH_LEVEL = os.environ.get('KEYAUTH_LEVEL', '1').strip()
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
 TELEGRAM_ADMIN_CHAT_ID = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '').strip()
+PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
 ADMIN_EMAILS = [e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
 ADMIN_TELEGRAMS = [t.strip() if t.strip().startswith('@') else '@' + t.strip()
                    for t in os.environ.get('ADMIN_TELEGRAMS', '@CrimeCell').split(',') if t.strip()]
 
-# Plan -> expiry days
-PLAN_DAYS = {"1day": 1, "7day": 7, "month": 30, "admin-week": 7}
+BOT_USERNAME = None  # resolved at startup
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -59,9 +53,13 @@ def make_token(user_id: str):
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
 
-def local_license_key():
-    seg = lambda n=6: "".join(random.choices(string.ascii_uppercase + string.digits, k=n))
-    return f"KENNY-{seg()}-{seg()}"
+def norm_tg(t: Optional[str]) -> Optional[str]:
+    if not t:
+        return None
+    t = t.strip()
+    if not t:
+        return None
+    return t if t.startswith('@') else '@' + t
 
 
 def is_admin(u: dict) -> bool:
@@ -80,45 +78,44 @@ def public_user(u: dict):
     }
 
 
-def _keyauth_generate_sync(expiry_days: int, note: str) -> Optional[str]:
-    """Generate a real license via KeyAuth Seller API. Returns key or None."""
-    if not KEYAUTH_SELLER_KEY:
-        return None
-    try:
-        params = {
-            "sellerkey": KEYAUTH_SELLER_KEY, "type": "add", "format": "json",
-            "expiry": str(expiry_days), "mask": KEYAUTH_MASK, "level": KEYAUTH_LEVEL,
-            "amount": "1", "note": note[:120],
-        }
-        r = requests.get("https://keyauth.win/api/seller/", params=params, timeout=15)
-        data = r.json()
-        if data.get("success") and data.get("key"):
-            return data["key"]
-        logger.warning("KeyAuth generate failed: %s", data.get("message"))
-    except Exception as e:
-        logger.warning("KeyAuth error: %s", e)
-    return None
-
-
-def _telegram_send_sync(text: str) -> bool:
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_ADMIN_CHAT_ID:
+# --- Telegram ---
+def _tg_send(chat_id, text: str) -> bool:
+    if not TELEGRAM_BOT_TOKEN or not chat_id:
         return False
     try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        r = requests.post(url, json={"chat_id": TELEGRAM_ADMIN_CHAT_ID, "text": text,
-                                     "parse_mode": "HTML", "disable_web_page_preview": True}, timeout=15)
+        r = requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True},
+            timeout=15,
+        )
         return r.ok and r.json().get("ok", False)
     except Exception as e:
-        logger.warning("Telegram error: %s", e)
+        logger.warning("Telegram send error: %s", e)
         return False
+
+
+def _order_keys_text(order: dict) -> str:
+    lines = ["<b>KennyPvtHax — your license key(s)</b>",
+             f"Order #{order['id'][:8].upper()}", ""]
+    for k in order.get("keys", []):
+        val = k.get("key") or "⏳ processing (restocking soon)"
+        lines.append(f"• <b>{k['project']}</b> — {k['plan']} ({k['duration']})\n  <code>{val}</code>")
+    lines.append("\nKeep your key private. Support: @CrimeCell")
+    return "\n".join(lines)
+
+
+async def deliver_order_to_chat(order: dict, chat_id) -> bool:
+    ok = await asyncio.to_thread(_tg_send, chat_id, _order_keys_text(order))
+    if ok:
+        await db.orders.update_one({"id": order["id"]}, {"$set": {"delivered": True, "buyer_chat_id": chat_id}})
+    return ok
 
 
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         return None
-    token = authorization.split(" ", 1)[1]
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+        payload = jwt.decode(authorization.split(" ", 1)[1], JWT_SECRET, algorithms=[JWT_ALGO])
         return await db.users.find_one({"id": payload.get("sub")})
     except Exception:
         return None
@@ -138,6 +135,22 @@ async def require_admin(authorization: Optional[str] = Header(None)):
     return user
 
 
+async def assign_key(project_id: str, plan_id: str) -> Optional[str]:
+    """Atomically pull an unused key from inventory, best match first."""
+    queries = [
+        {"projectId": project_id, "planId": plan_id, "used": False},
+        {"projectId": project_id, "planId": None, "used": False},
+        {"projectId": None, "planId": None, "used": False},
+    ]
+    for q in queries:
+        doc = await db.keys_inventory.find_one_and_update(
+            q, {"$set": {"used": True, "assigned_at": now_iso()}}, return_document=ReturnDocument.AFTER
+        )
+        if doc:
+            return doc["key"]
+    return None
+
+
 # ---------- Models ----------
 class SignupInput(BaseModel):
     name: str
@@ -152,7 +165,7 @@ class LoginInput(BaseModel):
 
 
 class ForgotInput(BaseModel):
-    identifier: str  # email or telegram
+    identifier: str
 
 
 class ResetInput(BaseModel):
@@ -182,7 +195,13 @@ class FeedbackInput(BaseModel):
     name: str
     rating: int = Field(ge=1, le=5)
     message: str
-    image: Optional[str] = None  # base64 data URL (optional screenshot)
+    image: Optional[str] = None
+
+
+class BulkKeysInput(BaseModel):
+    projectId: Optional[str] = None
+    planId: Optional[str] = None
+    keys: List[str]
 
 
 # ---------- Routes ----------
@@ -194,22 +213,19 @@ async def root():
 @api_router.get("/config")
 async def config():
     return {
-        "keyauth_enabled": bool(KEYAUTH_SELLER_KEY),
-        "telegram_enabled": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_ADMIN_CHAT_ID),
+        "telegram_enabled": bool(TELEGRAM_BOT_TOKEN),
+        "bot_username": BOT_USERNAME,
     }
 
 
 @api_router.post("/auth/signup")
 async def signup(data: SignupInput):
     email = (data.email or "").strip().lower() or None
-    telegram = (data.telegram or "").strip() or None
-    if telegram and not telegram.startswith("@"):
-        telegram = "@" + telegram
+    telegram = norm_tg(data.telegram)
     if not email and not telegram:
         raise HTTPException(status_code=400, detail="Provide an email or Telegram username")
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-
     ors = []
     if email:
         ors.append({"email": email})
@@ -217,11 +233,8 @@ async def signup(data: SignupInput):
         ors.append({"telegram": telegram})
     if await db.users.find_one({"$or": ors}):
         raise HTTPException(status_code=409, detail="Account already exists with this email/Telegram")
-
-    user = {
-        "id": str(uuid.uuid4()), "name": data.name.strip(), "email": email,
-        "telegram": telegram, "password_hash": pwd_context.hash(data.password), "created_at": now_iso(),
-    }
+    user = {"id": str(uuid.uuid4()), "name": data.name.strip(), "email": email, "telegram": telegram,
+            "password_hash": pwd_context.hash(data.password), "created_at": now_iso()}
     await db.users.insert_one(user)
     return {"token": make_token(user["id"]), "user": public_user(user)}
 
@@ -229,9 +242,7 @@ async def signup(data: SignupInput):
 @api_router.post("/auth/login")
 async def login(data: LoginInput):
     ident = data.identifier.strip()
-    ident_l = ident.lower()
-    tg = ident if ident.startswith("@") else "@" + ident
-    user = await db.users.find_one({"$or": [{"email": ident_l}, {"telegram": ident}, {"telegram": tg}]})
+    user = await db.users.find_one({"$or": [{"email": ident.lower()}, {"telegram": ident}, {"telegram": norm_tg(ident)}]})
     if not user or not pwd_context.verify(data.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {"token": make_token(user["id"]), "user": public_user(user)}
@@ -245,31 +256,23 @@ async def me(user=Depends(require_user)):
 @api_router.post("/auth/forgot")
 async def forgot_password(data: ForgotInput):
     ident = data.identifier.strip()
-    ident_l = ident.lower()
-    tg = ident if ident.startswith("@") else "@" + ident
-    user = await db.users.find_one({"$or": [{"email": ident_l}, {"telegram": ident}, {"telegram": tg}]})
+    user = await db.users.find_one({"$or": [{"email": ident.lower()}, {"telegram": ident}, {"telegram": norm_tg(ident)}]})
     if not user:
-        # Do not reveal existence; nothing to reset
         return {"found": False, "message": "If an account exists, a reset can be started."}
-
     token = secrets.token_urlsafe(24)
-    reset = {
-        "token": token,
-        "user_id": user["id"],
+    await db.password_resets.insert_one({
+        "token": token, "user_id": user["id"],
         "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
-        "used": False,
-        "created_at": now_iso(),
-    }
-    await db.password_resets.insert_one(reset)
-
-    # Notify admin via Telegram if configured (so support can assist / audit)
-    await asyncio.to_thread(
-        _telegram_send_sync,
-        f"<b>Password reset requested</b>\nUser: {user.get('email') or user.get('telegram')}",
-    )
-
-    # NOTE: In production this token would be emailed / Telegram-DMed to the user.
-    # Delivery is MOCKED here, so we return it directly to complete the flow.
+        "used": False, "created_at": now_iso(),
+    })
+    # Try to deliver the reset code via Telegram if the user has DM'd the bot before
+    tg = user.get("telegram")
+    if tg:
+        chat = await db.telegram_chats.find_one({"username": tg.lower()})
+        if chat and _tg_send(chat["chat_id"],
+                             f"<b>KennyPvtHax password reset</b>\nYour reset code:\n<code>{token}</code>\n\nEnter it on the site to set a new password. Expires in 30 min."):
+            return {"found": True, "delivery": "telegram"}
+    # Fallback (delivery mocked): return token so the flow can complete
     return {"found": True, "reset_token": token, "delivery": "mocked"}
 
 
@@ -277,7 +280,7 @@ async def forgot_password(data: ForgotInput):
 async def reset_password(data: ResetInput):
     if len(data.password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
-    reset = await db.password_resets.find_one({"token": data.token, "used": False})
+    reset = await db.password_resets.find_one({"token": data.token.strip(), "used": False})
     if not reset:
         raise HTTPException(status_code=400, detail="Invalid or already used reset link")
     if datetime.fromisoformat(reset["expires_at"]) < datetime.now(timezone.utc):
@@ -285,9 +288,8 @@ async def reset_password(data: ResetInput):
     user = await db.users.find_one({"id": reset["user_id"]})
     if not user:
         raise HTTPException(status_code=404, detail="Account not found")
-
     await db.users.update_one({"id": user["id"]}, {"$set": {"password_hash": pwd_context.hash(data.password)}})
-    await db.password_resets.update_one({"token": data.token}, {"$set": {"used": True}})
+    await db.password_resets.update_one({"token": data.token.strip()}, {"$set": {"used": True}})
     return {"token": make_token(user["id"]), "user": public_user(user)}
 
 
@@ -295,44 +297,49 @@ async def reset_password(data: ResetInput):
 async def create_order(data: OrderInput, current=Depends(get_current_user)):
     if not data.items:
         raise HTTPException(status_code=400, detail="No items in order")
-    telegram = data.telegram.strip()
-    if telegram and not telegram.startswith("@"):
-        telegram = "@" + telegram
+    telegram = norm_tg(data.telegram)
 
     keys = []
+    out_of_stock = False
     for it in data.items:
-        days = PLAN_DAYS.get(it.planId, 7)
-        note = f"KennyPvtHax {it.project} {it.plan} -> {telegram}"
-        key = await asyncio.to_thread(_keyauth_generate_sync, days, note)
-        keys.append({
-            "projectId": it.projectId, "project": it.project, "plan": it.plan,
-            "duration": it.duration, "key": key or local_license_key(),
-            "source": "keyauth" if key else "local",
-        })
+        assigned = await assign_key(it.projectId, it.planId)
+        if not assigned:
+            out_of_stock = True
+        keys.append({"projectId": it.projectId, "project": it.project, "plan": it.plan,
+                     "duration": it.duration, "key": assigned,
+                     "source": "inventory" if assigned else "pending"})
 
     total_inr = sum(i.inr for i in data.items)
     total_usd = sum(i.usd for i in data.items)
-
     order = {
         "id": str(uuid.uuid4()), "user_id": current["id"] if current else None,
         "telegram": telegram, "email": (data.email or "").strip() or None,
         "method": data.method, "currency": data.currency,
         "items": [i.dict() for i in data.items], "keys": keys,
         "total_inr": total_inr, "total_usd": total_usd,
-        "status": "paid", "delivered": False, "created_at": now_iso(),
+        "status": "paid", "delivered": False, "stock_ok": not out_of_stock, "created_at": now_iso(),
     }
-
-    # Telegram notification / delivery to admin
-    lines = [f"<b>New KennyPvtHax order</b>", f"Order: {order['id'][:8].upper()}",
-             f"Buyer TG: {telegram}", f"Total: {'₹'+str(total_inr) if data.currency=='inr' else '$'+str(total_usd)}",
-             f"Method: {data.method.upper()}", "", "<b>Keys:</b>"]
-    for k in keys:
-        lines.append(f"• {k['project']} — {k['plan']}: <code>{k['key']}</code>")
-    delivered = await asyncio.to_thread(_telegram_send_sync, "\n".join(lines))
-    order["delivered"] = delivered
-
     await db.orders.insert_one(order)
     order.pop("_id", None)
+
+    deep_link = f"https://t.me/{BOT_USERNAME}?start={order['id']}" if BOT_USERNAME else None
+
+    # Auto-deliver if buyer already DM'd the bot; else they use the deep link
+    if telegram:
+        chat = await db.telegram_chats.find_one({"username": telegram.lower()})
+        if chat:
+            await deliver_order_to_chat(order, chat["chat_id"])
+            order["delivered"] = True
+
+    # Notify admin/owner
+    if TELEGRAM_ADMIN_CHAT_ID:
+        admin_lines = [f"<b>New order</b> #{order['id'][:8].upper()}", f"Buyer: {telegram}",
+                       f"Total: {'₹'+str(total_inr) if data.currency=='inr' else '$'+str(total_usd)}",
+                       f"Stock: {'OK' if not out_of_stock else 'OUT OF STOCK ⚠️'}"]
+        await asyncio.to_thread(_tg_send, TELEGRAM_ADMIN_CHAT_ID, "\n".join(admin_lines))
+
+    order["telegram_deeplink"] = deep_link
+    order["bot_username"] = BOT_USERNAME
     return order
 
 
@@ -341,20 +348,20 @@ async def my_orders(user=Depends(require_user)):
     orders = await db.orders.find({"user_id": user["id"]}).sort("created_at", -1).to_list(200)
     for o in orders:
         o.pop("_id", None)
+        o["bot_username"] = BOT_USERNAME
+        o["telegram_deeplink"] = f"https://t.me/{BOT_USERNAME}?start={o['id']}" if BOT_USERNAME else None
     return {"orders": orders}
 
 
 @api_router.post("/feedback")
 async def create_feedback(data: FeedbackInput, current=Depends(get_current_user)):
-    image = data.image
-    if image and len(image) > 4_000_000:  # ~4MB safety cap
+    if data.image and len(data.image) > 4_000_000:
         raise HTTPException(status_code=413, detail="Screenshot too large (max ~3MB)")
-    fb = {
-        "id": str(uuid.uuid4()), "user_id": current["id"] if current else None,
-        "name": data.name.strip() or "Anonymous", "rating": data.rating,
-        "message": data.message.strip(), "image": image if image and image.startswith("data:image") else None,
-        "approved": True, "created_at": now_iso(),
-    }
+    fb = {"id": str(uuid.uuid4()), "user_id": current["id"] if current else None,
+          "name": data.name.strip() or "Anonymous", "rating": data.rating,
+          "message": data.message.strip(),
+          "image": data.image if data.image and data.image.startswith("data:image") else None,
+          "approved": True, "created_at": now_iso()}
     await db.feedback.insert_one(fb)
     fb.pop("_id", None)
     return fb
@@ -368,17 +375,54 @@ async def list_feedback():
     return {"feedback": items}
 
 
+# ---------- Telegram webhook ----------
+@api_router.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        return {"ok": True}
+    msg = data.get("message") or data.get("edited_message")
+    if not msg:
+        return {"ok": True}
+    chat_id = (msg.get("chat") or {}).get("id")
+    username = (msg.get("from") or {}).get("username")
+    text = (msg.get("text") or "").strip()
+
+    if username and chat_id:
+        await db.telegram_chats.update_one(
+            {"username": "@" + username.lower()},
+            {"$set": {"chat_id": chat_id, "updated_at": now_iso()}}, upsert=True)
+
+    if text.startswith("/start"):
+        parts = text.split(maxsplit=1)
+        payload = parts[1].strip() if len(parts) > 1 else ""
+        if payload:
+            order = await db.orders.find_one({"id": payload})
+            if order:
+                order.pop("_id", None)
+                ok = await deliver_order_to_chat(order, chat_id)
+                if not ok:
+                    await asyncio.to_thread(_tg_send, chat_id, "Could not fetch your key. Please contact @CrimeCell.")
+            else:
+                await asyncio.to_thread(_tg_send, chat_id, "Welcome to <b>KennyPvtHax</b>! Order not found — contact @CrimeCell for help.")
+        else:
+            await asyncio.to_thread(_tg_send, chat_id,
+                "Welcome to <b>KennyPvtHax</b>! Buy a key on the site, then tap the delivery link to receive it here instantly.")
+    return {"ok": True}
+
+
 # ---------- Admin ----------
 @api_router.get("/admin/stats")
 async def admin_stats(admin=Depends(require_admin)):
     orders = await db.orders.find().to_list(2000)
-    revenue_inr = sum(o.get("total_inr", 0) for o in orders)
-    revenue_usd = sum(o.get("total_usd", 0) for o in orders)
-    keys_count = sum(len(o.get("keys", [])) for o in orders)
     return {
         "orders": len(orders), "users": await db.users.count_documents({}),
         "feedback": await db.feedback.count_documents({}),
-        "keys_generated": keys_count, "revenue_inr": revenue_inr, "revenue_usd": revenue_usd,
+        "keys_available": await db.keys_inventory.count_documents({"used": False}),
+        "keys_used": await db.keys_inventory.count_documents({"used": True}),
+        "revenue_inr": sum(o.get("total_inr", 0) for o in orders),
+        "revenue_usd": sum(o.get("total_usd", 0) for o in orders),
         "delivered": sum(1 for o in orders if o.get("delivered")),
     }
 
@@ -405,38 +449,54 @@ async def admin_delete_feedback(fid: str, admin=Depends(require_admin)):
     return {"deleted": True}
 
 
-class KeyAuthGenInput(BaseModel):
-    expiry_days: int = 7
-    amount: int = 1
-    note: Optional[str] = "manual"
+@api_router.post("/admin/keys/bulk")
+async def admin_add_keys(data: BulkKeysInput, admin=Depends(require_admin)):
+    project_id = data.projectId or None
+    plan_id = data.planId or None
+    added, skipped = 0, 0
+    for raw in data.keys:
+        k = raw.strip()
+        if not k:
+            continue
+        if await db.keys_inventory.find_one({"key": k}):
+            skipped += 1
+            continue
+        await db.keys_inventory.insert_one({
+            "id": str(uuid.uuid4()), "key": k, "projectId": project_id, "planId": plan_id,
+            "used": False, "created_at": now_iso(),
+        })
+        added += 1
+    return {"added": added, "skipped": skipped}
 
 
-@api_router.post("/admin/keyauth/generate")
-async def admin_keyauth_generate(data: KeyAuthGenInput, admin=Depends(require_admin)):
-    if not KEYAUTH_SELLER_KEY:
-        raise HTTPException(status_code=400, detail="KeyAuth not configured (missing seller key)")
-    keys = []
-    for _ in range(max(1, min(data.amount, 20))):
-        k = await asyncio.to_thread(_keyauth_generate_sync, data.expiry_days, data.note or "manual")
-        if k:
-            keys.append(k)
-    if not keys:
-        raise HTTPException(status_code=502, detail="KeyAuth did not return a key")
-    return {"keys": keys}
+@api_router.get("/admin/keys/summary")
+async def admin_keys_summary(admin=Depends(require_admin)):
+    pipeline = [{"$group": {"_id": {"projectId": "$projectId", "planId": "$planId", "used": "$used"},
+                            "count": {"$sum": 1}}}]
+    rows = await db.keys_inventory.aggregate(pipeline).to_list(500)
+    buckets = {}
+    for r in rows:
+        key = f"{r['_id'].get('projectId') or 'any'}|{r['_id'].get('planId') or 'any'}"
+        b = buckets.setdefault(key, {"projectId": r['_id'].get('projectId') or 'any',
+                                     "planId": r['_id'].get('planId') or 'any', "available": 0, "used": 0})
+        b["used" if r["_id"].get("used") else "available"] += r["count"]
+    return {"buckets": list(buckets.values()),
+            "total_available": await db.keys_inventory.count_documents({"used": False}),
+            "total_used": await db.keys_inventory.count_documents({"used": True})}
 
 
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware, allow_credentials=True, allow_origins=["*"],
-    allow_methods=["*"], allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"],
+                   allow_methods=["*"], allow_headers=["*"])
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 @app.on_event("startup")
-async def seed_feedback():
+async def startup_tasks():
+    global BOT_USERNAME
+    # seed feedback
     if await db.feedback.count_documents({}) == 0:
         seed = [
             {"id": str(uuid.uuid4()), "user_id": None, "name": "ShadowKingBGMI", "rating": 5, "image": None, "message": "Frozen Fire's hide-ESP-while-recording is unreal. Streamed a whole session, zero flags.", "approved": True, "created_at": now_iso()},
@@ -445,6 +505,21 @@ async def seed_feedback():
             {"id": str(uuid.uuid4()), "user_id": None, "name": "SilentStormX", "rating": 5, "image": None, "message": "Patched within hours of the last BGMI update. Support on Telegram is legit 24/7.", "approved": True, "created_at": now_iso()},
         ]
         await db.feedback.insert_many(seed)
+
+    if TELEGRAM_BOT_TOKEN:
+        try:
+            me = await asyncio.to_thread(lambda: requests.get(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe", timeout=10).json())
+            if me.get("ok"):
+                BOT_USERNAME = me["result"]["username"]
+            if PUBLIC_BASE_URL:
+                hook = f"{PUBLIC_BASE_URL}/api/telegram/webhook"
+                res = await asyncio.to_thread(lambda: requests.get(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook",
+                    params={"url": hook}, timeout=10).json())
+                logger.info("Telegram setWebhook -> %s (%s)", res.get("ok"), hook)
+        except Exception as e:
+            logger.warning("Telegram startup error: %s", e)
 
 
 @app.on_event("shutdown")

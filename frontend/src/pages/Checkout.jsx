@@ -85,8 +85,17 @@ const Checkout = () => {
         )}
 
         <div className="mt-4 inline-block border border-yellow-600/40 bg-yellow-950/20 px-4 py-2 font-mono2 text-xs text-yellow-500/90">
-          Payment is mocked — real UPI/Stripe & Telegram bot delivery coming soon
+          Payment is mocked — real UPI/Stripe coming soon
         </div>
+        {order?.telegram_deeplink && (
+          <div className="mt-6">
+            <a href={order.telegram_deeplink} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 border border-red-600/50 bg-red-600/10 px-6 py-3 text-sm font-semibold text-red-300 hover:bg-red-600/20 transition-colors clip-corner">
+              <Send className="h-4 w-4" /> Receive key on Telegram
+            </a>
+            <p className="mt-2 font-mono2 text-[11px] text-zinc-600">Tap, then press START — the bot sends your key instantly.</p>
+          </div>
+        )}
         <div className="mt-8 flex justify-center gap-3">
           <button onClick={() => navigate("/account")} className="inline-flex items-center gap-2 bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors clip-corner">
             View in account <ArrowRight className="h-4 w-4" />
