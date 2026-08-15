@@ -12,6 +12,7 @@ import Pricing from "./pages/Pricing";
 import Features from "./pages/Features";
 import Checkout from "./pages/Checkout";
 import Account from "./pages/Account";
+import Admin from "./pages/Admin";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/features" element={<Features />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/account" element={<Account />} />
+                <Route path="/admin" element={<Admin />} />
               </Routes>
             </main>
             <Footer />

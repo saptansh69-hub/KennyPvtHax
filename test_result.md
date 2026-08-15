@@ -237,6 +237,138 @@ backend:
         agent: "testing"
         comment: "POST /api/feedback creates auto-approved feedback. Rating validation works (out of 1-5 range returns 422). New feedback appears in GET list. Tested successfully."
 
+  - task: "Config endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/config returns keyauth_enabled and telegram_enabled flags. Both correctly return false when env vars not configured. Tested successfully."
+
+  - task: "Admin access control"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Admin access control working correctly. Users with telegram @CrimeCell (from ADMIN_TELEGRAMS env) have is_admin=true. Normal users have is_admin=false. GET /api/auth/me returns correct is_admin flag. Tested successfully."
+
+  - task: "Admin stats endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/stats returns 200 with admin token, includes all required fields (orders, users, feedback, keys_generated, revenue_inr, revenue_usd, delivered). Returns 403 with non-admin token or no token. Tested successfully."
+
+  - task: "Admin orders endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/orders returns 200 with admin token, returns orders array. Returns 403 with non-admin token or no token. Tested successfully."
+
+  - task: "Admin feedback endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/feedback returns 200 with admin token, returns feedback array. Returns 403 with non-admin token or no token. Tested successfully."
+
+  - task: "Admin delete feedback"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "DELETE /api/admin/feedback/{id} deletes feedback as admin (returns 200). Deleted feedback no longer appears in GET /api/feedback. Tested successfully."
+
+  - task: "Admin KeyAuth generate"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/admin/keyauth/generate returns 400 with proper error message when KeyAuth not configured (expected behavior). Returns 403 with non-admin token. Tested successfully."
+
+  - task: "Orders with planId and key fallback"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/orders with planId values (1day, 7day, month, admin-week) generates keys correctly. All keys have source='local' and format KENNY-XXXXXX-XXXXXX when KeyAuth disabled. Order status is 'paid', delivered is false (Telegram not configured). Works for both guest and authenticated users. Authenticated orders retrievable via GET /api/orders/me. Tested successfully."
+
+  - task: "Feedback with image support"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/feedback with base64 data URL image (data:image/...) stores image correctly. Image field populated in response and GET /api/feedback. Invalid image format (not starting with 'data:image') correctly saves image as null. Tested successfully."
+
+  - task: "Admin by email (ADMIN_EMAILS)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Admin by email feature working correctly. User with email 'saptanshtesting@gmail.com' (from ADMIN_EMAILS env) has is_admin=true. GET /api/auth/me returns correct is_admin flag. Admin endpoints (GET /api/admin/stats) work with admin email account (200) and fail with non-admin account (403). All 8 tests passed."
+
+  - task: "Password reset flow (forgot/reset)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Password reset flow working correctly. POST /api/auth/forgot with valid identifier (email or telegram) returns found=true and reset_token. Nonexistent identifier returns found=false with no token. POST /api/auth/reset with valid token updates password and returns JWT token. Old password no longer works (401), new password works (200). Reset token can only be used once (400 on reuse). Bogus token returns 400. Password validation enforced (< 6 chars returns 400). Telegram identifier works with and without @ prefix. All 20 tests passed."
+
 frontend:
   - task: "Frontend UI"
     implemented: true
@@ -253,12 +385,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and working"
+    - "All backend endpoints tested and working including admin by email and password reset flow"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -266,3 +398,7 @@ test_plan:
 agent_communication:
   - agent: "testing"
     message: "Completed comprehensive backend testing. All 25 tests passed (100% success rate). Tested: root endpoint, auth (signup/login/me with email and telegram), orders (guest and authenticated with license key generation), and feedback (list/create with validation). All endpoints working correctly at https://kenny-gaming-mods.preview.emergentagent.com/api. Backend is production-ready."
+  - agent: "testing"
+    message: "Completed testing of NEW/CHANGED endpoints. All 39 tests passed (100% success rate). Tested: GET /api/config (keyauth_enabled and telegram_enabled flags), admin access control (is_admin flag based on ADMIN_TELEGRAMS env), all admin endpoints (stats/orders/feedback/delete/keyauth), orders with planId values and local key fallback, feedback with image support and validation. All new features working correctly. Backend fully functional with graceful fallbacks when KeyAuth and Telegram not configured."
+  - agent: "testing"
+    message: "Completed testing of NEWEST additions. All 28 tests passed (100% success rate). Tested: (1) Admin by email - ADMIN_EMAILS env correctly grants admin access to saptanshtesting@gmail.com, is_admin=true returned, admin endpoints work (200) and fail for non-admin (403). (2) Password reset flow - POST /api/auth/forgot returns found=true/false with reset_token for valid users, POST /api/auth/reset updates password with valid token, old password fails (401), new password works (200), token reuse blocked (400), bogus token fails (400), password validation enforced (< 6 chars = 400), telegram identifier works with/without @. All backend features fully functional."

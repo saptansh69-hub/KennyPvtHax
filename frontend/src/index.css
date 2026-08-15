@@ -170,15 +170,15 @@ code, .mono {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(6px) brightness(0.42) saturate(1.25);
-  transform: scale(1.08);
+  filter: blur(1.5px) brightness(0.6) saturate(1.2);
+  transform: scale(1.06);
 }
 .hero-video-overlay {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(229,9,20,0.28), transparent 70%),
-    linear-gradient(180deg, rgba(8,8,10,0.55) 0%, rgba(8,8,10,0.8) 60%, #08080a 100%);
+    radial-gradient(ellipse 70% 60% at 50% 40%, rgba(229,9,20,0.22), transparent 72%),
+    linear-gradient(180deg, rgba(8,8,10,0.35) 0%, rgba(8,8,10,0.62) 62%, #08080a 100%);
 }
 
 /* YouTube blurred cover background */
@@ -199,7 +199,7 @@ code, .mono {
   transform: translate(-50%, -50%);
   pointer-events: none;
   border: 0;
-  filter: blur(7px) brightness(0.4) saturate(1.2);
+  filter: blur(1.5px) brightness(0.62) saturate(1.15);
 }
 
 /* Appealing tech card */

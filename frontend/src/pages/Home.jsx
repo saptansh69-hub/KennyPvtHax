@@ -1,8 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, KeyRound, Send, Cpu, ShieldCheck, Radio, Video } from "lucide-react";
-import { coreFeatures, showcaseStats, telegramUrl, heroBgVideo } from "../mock";
-import { toYouTubeBg } from "../utils/youtube";
+import { coreFeatures, showcaseStats, telegramUrl } from "../mock";
 import ProjectsSection from "../components/ProjectsSection";
 import DemosSection from "../components/DemosSection";
 import FeedbackSection from "../components/FeedbackSection";
@@ -14,15 +13,9 @@ const Home = () => {
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="yt-bg">
-          <iframe
-            src={toYouTubeBg(heroBgVideo)}
-            title="Cyberpunk background"
-            allow="autoplay; encrypted-media"
-            tabIndex={-1}
-            aria-hidden="true"
-          />
-        </div>
+        <video className="hero-video" autoPlay loop muted playsInline poster="/kenny-logo.jpg">
+          <source src="/cyber-city.mp4" type="video/mp4" />
+        </video>
         <div className="hero-video-overlay" />
         <div className="grid-bg absolute inset-0 opacity-30" />
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-20 md:pb-32 md:pt-28">
