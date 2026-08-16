@@ -453,6 +453,66 @@ backend:
         agent: "testing"
         comment: "Regression testing passed. Auth endpoints (signup/login/me) working correctly. Feedback endpoints (GET/POST) working correctly. POST /api/admin/keyauth/generate correctly returns 404 (endpoint removed). All 6 tests passed."
 
+  - task: "Telegram owner /addkeys command"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/telegram/webhook with owner chat_id (7796388366) and /addkeys command successfully adds keys to inventory. Tested with frozen|7day bucket - added 3 keys (TG-FROZ-7D-1, TG-FROZ-7D-2, TG-FROZ-7D-3). Verified via GET /api/admin/keys/summary showing frozen|7day bucket with available=3. Webhook returns 200 with ok=true. Owner receives confirmation message via Telegram."
+
+  - task: "Telegram owner /stock command"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "POST /api/telegram/webhook with owner chat_id (7796388366) and /stock command successfully returns 200 with ok=true. Owner receives stock summary via Telegram showing all buckets with available/sold counts and total orders."
+
+  - task: "Telegram owner security (non-owner cannot add keys)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Security test passed. Non-owner (chat_id 999111) attempted to add HACKER-KEY-1 via /addkeys command but was correctly rejected. Webhook returns 200 with ok=true (to avoid revealing security logic to attacker) but keys were NOT added. Verified via GET /api/admin/keys/summary - total_available remained unchanged at 3, frozen|7day count remained unchanged at 3. Only owner chat_id (7796388366) can add keys."
+
+  - task: "Low-stock alert logic"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Low-stock alert logic working correctly. Added 2 keys (LOWTEST-1, LOWTEST-2) to admin|admin-week bucket via POST /api/admin/keys/bulk. Placed 1 guest order for admin|admin-week which assigned LOWTEST-1 from inventory (source='inventory', stock_ok=true). Remaining count dropped to 1 (which is <= LOW_STOCK_THRESHOLD of 3), triggering low-stock alert to owner via Telegram DM. Verified via GET /api/admin/keys/summary showing admin|admin-week available=1. Alert logic triggers correctly when stock drops below threshold."
+
+  - task: "Telegram integration regression"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Regression checks passed. GET /api/config returns telegram_enabled=true and bot_username='kennypvthaxhelpbot'. POST /api/admin/keys/bulk works for admin (returns 200 with added/skipped counts) and correctly returns 403 for non-admin. All existing endpoints continue to work correctly with new Telegram owner features."
+
 frontend:
   - task: "Frontend UI"
     implemented: true
@@ -469,12 +529,12 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
   current_focus:
-    - "All backend endpoints tested and working including KeyAuth removal, key inventory system, and Telegram delivery integration"
+    - "All backend endpoints tested and working including Telegram owner features (/addkeys, /stock, security, low-stock alerts)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -488,3 +548,5 @@ agent_communication:
     message: "Completed testing of NEWEST additions. All 28 tests passed (100% success rate). Tested: (1) Admin by email - ADMIN_EMAILS env correctly grants admin access to saptanshtesting@gmail.com, is_admin=true returned, admin endpoints work (200) and fail for non-admin (403). (2) Password reset flow - POST /api/auth/forgot returns found=true/false with reset_token for valid users, POST /api/auth/reset updates password with valid token, old password fails (401), new password works (200), token reuse blocked (400), bogus token fails (400), password validation enforced (< 6 chars = 400), telegram identifier works with/without @. All backend features fully functional."
   - agent: "testing"
     message: "Completed testing of KeyAuth removal + Key Inventory + Telegram Delivery integration. All 45 tests passed (100% success rate). Tested: (1) GET /api/config returns telegram_enabled=true and bot_username='kennypvthaxhelpbot'. (2) Admin key inventory - POST /api/admin/keys/bulk adds keys with projectId/planId or uncategorized, deduplication working (added=2/0, skipped=0/2), non-admin returns 403. (3) GET /api/admin/keys/summary returns buckets (og|1day available=2, any|any available=1), total_available=3, non-admin returns 403. (4) Order key assignment - orders assigned keys from matching bucket (KENNY-OG1-AAAA, KENNY-OG1-BBBB), then fallback to uncategorized (GLOBAL-KEY-1), then null when exhausted (source='pending', stock_ok=false). All orders include telegram_deeplink and bot_username. (5) GET /api/orders/me returns orders with telegram_deeplink and bot_username. (6) POST /api/telegram/webhook handles /start and /start {order_id}, returns ok=true. (7) Regression - auth endpoints work, feedback endpoints work, /api/admin/keyauth/generate returns 404 (removed). All backend features fully functional."
+  - agent: "testing"
+    message: "Completed testing of NEW Telegram owner features. All 5 tests passed (100% success rate). Tested: (1) Owner /addkeys command - POST /api/telegram/webhook with owner chat_id (7796388366) and /addkeys frozen 7day + 3 keys successfully added keys to frozen|7day bucket (verified via GET /api/admin/keys/summary showing available=3). (2) Owner /stock command - POST /api/telegram/webhook with /stock returned 200 with ok=true. (3) Non-owner security - Non-owner (chat_id 999111) attempted /addkeys but keys were NOT added (total_available and frozen|7day counts unchanged), security working correctly. (4) Low-stock alert logic - Added 2 keys to admin|admin-week, placed 1 order which assigned LOWTEST-1, remaining dropped to 1 (<=threshold 3), low-stock alert triggered to owner. (5) Regression - GET /api/config returns telegram_enabled=true and bot_username='kennypvthaxhelpbot', POST /api/admin/keys/bulk works for admin (200) and returns 403 for non-admin. All Telegram owner features fully functional. NOTE: Only 1 owner /addkeys and 1 owner /stock webhook sent to minimize spam to owner (chat_id 7796388366)."

@@ -29,6 +29,7 @@ JWT_EXP_DAYS = 30
 
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
 TELEGRAM_ADMIN_CHAT_ID = os.environ.get('TELEGRAM_ADMIN_CHAT_ID', '').strip()
+LOW_STOCK_THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '3') or 3)
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
 ADMIN_EMAILS = [e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
 ADMIN_TELEGRAMS = [t.strip() if t.strip().startswith('@') else '@' + t.strip()
@@ -149,6 +150,40 @@ async def assign_key(project_id: str, plan_id: str) -> Optional[str]:
         if doc:
             return doc["key"]
     return None
+
+
+async def add_keys_to_inventory(project_id, plan_id, keys):
+    project_id = project_id or None
+    plan_id = plan_id or None
+    added, skipped = 0, 0
+    for raw in keys:
+        k = (raw or "").strip()
+        if not k:
+            continue
+        if await db.keys_inventory.find_one({"key": k}):
+            skipped += 1
+            continue
+        await db.keys_inventory.insert_one({
+            "id": str(uuid.uuid4()), "key": k, "projectId": project_id, "planId": plan_id,
+            "used": False, "created_at": now_iso(),
+        })
+        added += 1
+    return added, skipped
+
+
+async def check_low_stock_and_notify(project_id, plan_id):
+    """Alert the owner on Telegram when a bucket runs low/out."""
+    if not TELEGRAM_ADMIN_CHAT_ID:
+        return
+    remaining = await db.keys_inventory.count_documents(
+        {"projectId": project_id, "planId": plan_id, "used": False})
+    if remaining <= LOW_STOCK_THRESHOLD:
+        tag = f"{project_id or 'any'} / {plan_id or 'any'}"
+        if remaining == 0:
+            msg = f"🔴 <b>OUT OF STOCK</b>\nBucket: {tag}\nAdd more keys: /addkeys {project_id or ''} {plan_id or ''}"
+        else:
+            msg = f"⚠️ <b>Low stock</b>\nBucket: {tag}\nOnly {remaining} key(s) left."
+        await asyncio.to_thread(_tg_send, TELEGRAM_ADMIN_CHAT_ID, msg.strip())
 
 
 # ---------- Models ----------
@@ -308,6 +343,7 @@ async def create_order(data: OrderInput, current=Depends(get_current_user)):
         keys.append({"projectId": it.projectId, "project": it.project, "plan": it.plan,
                      "duration": it.duration, "key": assigned,
                      "source": "inventory" if assigned else "pending"})
+        await check_low_stock_and_notify(it.projectId, it.planId)
 
     total_inr = sum(i.inr for i in data.items)
     total_usd = sum(i.usd for i in data.items)
@@ -394,6 +430,52 @@ async def telegram_webhook(request: Request):
             {"username": "@" + username.lower()},
             {"$set": {"chat_id": chat_id, "updated_at": now_iso()}}, upsert=True)
 
+    is_owner = (TELEGRAM_ADMIN_CHAT_ID and str(chat_id) == str(TELEGRAM_ADMIN_CHAT_ID)) or \
+               ("@" + (username or "").lower() in [t.lower() for t in ADMIN_TELEGRAMS])
+
+    # ----- Owner commands -----
+    if is_owner and text.startswith("/addkeys"):
+        lines = [l for l in text.split("\n")]
+        header = lines[0].split()  # ["/addkeys", projectId?, planId?]
+        project_id = header[1] if len(header) > 1 and header[1] not in ("any", "-") else None
+        plan_id = header[2] if len(header) > 2 and header[2] not in ("any", "-") else None
+        keys = [l.strip() for l in lines[1:] if l.strip()]
+        if not keys:
+            await asyncio.to_thread(_tg_send, chat_id,
+                "Usage:\n<code>/addkeys [project] [plan]</code>\nthen one key per line.\n\nExample:\n<code>/addkeys og 1day\nKENNY-AAAA-BBBB\nKENNY-CCCC-DDDD</code>\n\nprojects: og, frozen, admin (or omit for any)\nplans: 1day, 7day, month, admin-week (or omit for any)")
+        else:
+            added, skipped = await add_keys_to_inventory(project_id, plan_id, keys)
+            avail = await db.keys_inventory.count_documents({"used": False})
+            await asyncio.to_thread(_tg_send, chat_id,
+                f"✅ Added <b>{added}</b> key(s) to <b>{project_id or 'any'} / {plan_id or 'any'}</b>"
+                + (f"\n⚠️ Skipped {skipped} duplicate(s)" if skipped else "")
+                + f"\n\nTotal keys in stock: <b>{avail}</b>")
+        return {"ok": True}
+
+    if is_owner and text.strip() in ("/stock", "/stats"):
+        rows = await db.keys_inventory.aggregate([
+            {"$group": {"_id": {"p": "$projectId", "l": "$planId", "u": "$used"}, "c": {"$sum": 1}}}]).to_list(500)
+        buckets = {}
+        for r in rows:
+            k = f"{r['_id'].get('p') or 'any'} / {r['_id'].get('l') or 'any'}"
+            b = buckets.setdefault(k, {"a": 0, "u": 0})
+            b["u" if r["_id"].get("u") else "a"] += r["c"]
+        orders_ct = await db.orders.count_documents({})
+        lines = ["<b>📦 KennyPvtHax stock</b>"]
+        for k, v in sorted(buckets.items()):
+            lines.append(f"• {k}: <b>{v['a']}</b> left / {v['u']} sold")
+        if len(lines) == 1:
+            lines.append("No keys added yet. Use /addkeys")
+        lines.append(f"\nTotal orders: {orders_ct}")
+        await asyncio.to_thread(_tg_send, chat_id, "\n".join(lines))
+        return {"ok": True}
+
+    if is_owner and text.strip() in ("/help", "/commands"):
+        await asyncio.to_thread(_tg_send, chat_id,
+            "<b>Owner commands</b>\n/addkeys [project] [plan] + keys (one per line)\n/stock — view inventory\n/help — this message")
+        return {"ok": True}
+
+    # ----- Buyer key delivery -----
     if text.startswith("/start"):
         parts = text.split(maxsplit=1)
         payload = parts[1].strip() if len(parts) > 1 else ""
@@ -451,21 +533,7 @@ async def admin_delete_feedback(fid: str, admin=Depends(require_admin)):
 
 @api_router.post("/admin/keys/bulk")
 async def admin_add_keys(data: BulkKeysInput, admin=Depends(require_admin)):
-    project_id = data.projectId or None
-    plan_id = data.planId or None
-    added, skipped = 0, 0
-    for raw in data.keys:
-        k = raw.strip()
-        if not k:
-            continue
-        if await db.keys_inventory.find_one({"key": k}):
-            skipped += 1
-            continue
-        await db.keys_inventory.insert_one({
-            "id": str(uuid.uuid4()), "key": k, "projectId": project_id, "planId": plan_id,
-            "used": False, "created_at": now_iso(),
-        })
-        added += 1
+    added, skipped = await add_keys_to_inventory(data.projectId, data.planId, data.keys)
     return {"added": added, "skipped": skipped}
 
 
