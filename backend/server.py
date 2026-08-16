@@ -223,6 +223,7 @@ class OrderInput(BaseModel):
     email: Optional[str] = None
     method: str = "upi"
     currency: str = "inr"
+    payment_ref: Optional[str] = None
     items: List[OrderItem]
 
 
@@ -328,54 +329,83 @@ async def reset_password(data: ResetInput):
     return {"token": make_token(user["id"]), "user": public_user(user)}
 
 
+async def fulfill_order(order: dict) -> dict:
+    """Assign keys from inventory + deliver. Marks order paid."""
+    keys = []
+    out_of_stock = False
+    for it in order["items"]:
+        assigned = await assign_key(it["projectId"], it["planId"])
+        if not assigned:
+            out_of_stock = True
+        keys.append({"projectId": it["projectId"], "project": it["project"], "plan": it["plan"],
+                     "duration": it["duration"], "key": assigned,
+                     "source": "inventory" if assigned else "pending"})
+        await check_low_stock_and_notify(it["projectId"], it["planId"])
+    order["keys"] = keys
+    order["stock_ok"] = not out_of_stock
+    order["status"] = "paid"
+    await db.orders.update_one({"id": order["id"]},
+                               {"$set": {"keys": keys, "stock_ok": not out_of_stock, "status": "paid"}})
+    tg = order.get("telegram")
+    if tg:
+        chat = await db.telegram_chats.find_one({"username": tg.lower()})
+        if chat:
+            await deliver_order_to_chat(order, chat["chat_id"])
+            order["delivered"] = True
+    order["telegram_deeplink"] = f"https://t.me/{BOT_USERNAME}?start={order['id']}" if BOT_USERNAME else None
+    order["bot_username"] = BOT_USERNAME
+    return order
+
+
 @api_router.post("/orders")
 async def create_order(data: OrderInput, current=Depends(get_current_user)):
     if not data.items:
         raise HTTPException(status_code=400, detail="No items in order")
     telegram = norm_tg(data.telegram)
-
-    keys = []
-    out_of_stock = False
-    for it in data.items:
-        assigned = await assign_key(it.projectId, it.planId)
-        if not assigned:
-            out_of_stock = True
-        keys.append({"projectId": it.projectId, "project": it.project, "plan": it.plan,
-                     "duration": it.duration, "key": assigned,
-                     "source": "inventory" if assigned else "pending"})
-        await check_low_stock_and_notify(it.projectId, it.planId)
-
     total_inr = sum(i.inr for i in data.items)
     total_usd = sum(i.usd for i in data.items)
+
     order = {
         "id": str(uuid.uuid4()), "user_id": current["id"] if current else None,
         "telegram": telegram, "email": (data.email or "").strip() or None,
         "method": data.method, "currency": data.currency,
-        "items": [i.dict() for i in data.items], "keys": keys,
+        "payment_ref": (data.payment_ref or "").strip() or None,
+        "items": [i.dict() for i in data.items], "keys": [],
         "total_inr": total_inr, "total_usd": total_usd,
-        "status": "paid", "delivered": False, "stock_ok": not out_of_stock, "created_at": now_iso(),
+        "status": "awaiting_verification" if data.method == "upi" else "paid",
+        "delivered": False, "stock_ok": True, "created_at": now_iso(),
     }
     await db.orders.insert_one(order)
     order.pop("_id", None)
 
-    deep_link = f"https://t.me/{BOT_USERNAME}?start={order['id']}" if BOT_USERNAME else None
+    if data.method == "upi":
+        # QR payment -> owner verifies before keys are released
+        if TELEGRAM_ADMIN_CHAT_ID:
+            amt = f"₹{total_inr}" if data.currency == "inr" else f"${total_usd}"
+            await asyncio.to_thread(_tg_send, TELEGRAM_ADMIN_CHAT_ID,
+                f"🕒 <b>Payment to verify</b> #{order['id'][:8].upper()}\nBuyer: {telegram}\nAmount: {amt}\nUPI Ref: {order['payment_ref'] or '—'}\n\nApprove: <code>/verify {order['id']}</code>")
+        order["telegram_deeplink"] = f"https://t.me/{BOT_USERNAME}?start={order['id']}" if BOT_USERNAME else None
+        order["bot_username"] = BOT_USERNAME
+        return order
 
-    # Auto-deliver if buyer already DM'd the bot; else they use the deep link
-    if telegram:
-        chat = await db.telegram_chats.find_one({"username": telegram.lower()})
-        if chat:
-            await deliver_order_to_chat(order, chat["chat_id"])
-            order["delivered"] = True
-
-    # Notify admin/owner
+    # Non-UPI (card) -> instant mock fulfilment
+    order = await fulfill_order(order)
     if TELEGRAM_ADMIN_CHAT_ID:
-        admin_lines = [f"<b>New order</b> #{order['id'][:8].upper()}", f"Buyer: {telegram}",
-                       f"Total: {'₹'+str(total_inr) if data.currency=='inr' else '$'+str(total_usd)}",
-                       f"Stock: {'OK' if not out_of_stock else 'OUT OF STOCK ⚠️'}"]
-        await asyncio.to_thread(_tg_send, TELEGRAM_ADMIN_CHAT_ID, "\n".join(admin_lines))
+        await asyncio.to_thread(_tg_send, TELEGRAM_ADMIN_CHAT_ID,
+            f"<b>New order</b> #{order['id'][:8].upper()}\nBuyer: {telegram}\nTotal: {'₹'+str(total_inr) if data.currency=='inr' else '$'+str(total_usd)}")
+    return order
 
-    order["telegram_deeplink"] = deep_link
-    order["bot_username"] = BOT_USERNAME
+
+@api_router.post("/admin/orders/{oid}/verify")
+async def verify_order(oid: str, admin=Depends(require_admin)):
+    order = await db.orders.find_one({"id": oid})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("status") == "paid":
+        order.pop("_id", None)
+        return order
+    order.pop("_id", None)
+    order = await fulfill_order(order)
     return order
 
 
@@ -472,7 +502,41 @@ async def telegram_webhook(request: Request):
 
     if is_owner and text.strip() in ("/help", "/commands"):
         await asyncio.to_thread(_tg_send, chat_id,
-            "<b>Owner commands</b>\n/addkeys [project] [plan] + keys (one per line)\n/stock — view inventory\n/help — this message")
+            "<b>Owner commands</b>\n/addkeys [project] [plan] + keys (one per line)\n/stock — view inventory\n/pending — orders awaiting verification\n/verify &lt;orderId&gt; — approve a UPI payment &amp; send the key\n/help — this message")
+        return {"ok": True}
+
+    if is_owner and text.strip() == "/pending":
+        pend = await db.orders.find({"status": "awaiting_verification"}).sort("created_at", -1).to_list(30)
+        if not pend:
+            await asyncio.to_thread(_tg_send, chat_id, "No orders awaiting verification. ✅")
+        else:
+            lines = ["<b>🕒 Awaiting verification</b>"]
+            for o in pend:
+                amt = f"₹{o.get('total_inr')}" if o.get("currency") == "inr" else f"${o.get('total_usd')}"
+                lines.append(f"• #{o['id'][:8].upper()} {o.get('telegram')} {amt} ref:{o.get('payment_ref') or '—'}\n  /verify {o['id']}")
+            await asyncio.to_thread(_tg_send, chat_id, "\n".join(lines))
+        return {"ok": True}
+
+    if is_owner and text.startswith("/verify"):
+        parts = text.split()
+        if len(parts) < 2:
+            await asyncio.to_thread(_tg_send, chat_id, "Usage: /verify &lt;orderId&gt;")
+            return {"ok": True}
+        oid = parts[1].strip()
+        order = await db.orders.find_one({"id": oid})
+        if not order:
+            order = await db.orders.find_one({"id": {"$regex": f"^{oid}", "$options": "i"}})
+        if not order:
+            await asyncio.to_thread(_tg_send, chat_id, "Order not found.")
+            return {"ok": True}
+        if order.get("status") == "paid":
+            await asyncio.to_thread(_tg_send, chat_id, f"Order #{order['id'][:8].upper()} already verified.")
+            return {"ok": True}
+        order.pop("_id", None)
+        order = await fulfill_order(order)
+        keytxt = "\n".join(f"• {k['project']} {k['plan']}: {k.get('key') or 'PENDING RESTOCK'}" for k in order["keys"])
+        await asyncio.to_thread(_tg_send, chat_id,
+            f"✅ Verified #{order['id'][:8].upper()} for {order.get('telegram')}\n{keytxt}\nDelivered: {'yes' if order.get('delivered') else 'buyer must open bot link'}")
         return {"ok": True}
 
     # ----- Buyer key delivery -----
@@ -483,9 +547,15 @@ async def telegram_webhook(request: Request):
             order = await db.orders.find_one({"id": payload})
             if order:
                 order.pop("_id", None)
-                ok = await deliver_order_to_chat(order, chat_id)
-                if not ok:
-                    await asyncio.to_thread(_tg_send, chat_id, "Could not fetch your key. Please contact @CrimeCell.")
+                if order.get("status") != "paid":
+                    await db.orders.update_one({"id": order["id"]}, {"$set": {"buyer_chat_id": chat_id}})
+                    await asyncio.to_thread(_tg_send, chat_id,
+                        "🕒 Thanks! Your payment for order #" + order["id"][:8].upper() +
+                        " is being verified. Your key will be sent here automatically once confirmed.")
+                else:
+                    ok = await deliver_order_to_chat(order, chat_id)
+                    if not ok:
+                        await asyncio.to_thread(_tg_send, chat_id, "Could not fetch your key. Please contact @CrimeCell.")
             else:
                 await asyncio.to_thread(_tg_send, chat_id, "Welcome to <b>KennyPvtHax</b>! Order not found — contact @CrimeCell for help.")
         else:

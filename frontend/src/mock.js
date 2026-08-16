@@ -110,3 +110,15 @@ export const logoSrc = "/kenny-logo.jpg";
 // Video links
 export const heroBgVideo = "https://youtu.be/COa9LDmZBzs"; // cyberpunk background
 export const featuredShowcaseVideo = "https://youtu.be/T63ZwaEUPCw"; // main gameplay reel
+
+// 69 LOVER SALE — 7-day countdown starting today 9AM IST
+export const promo = {
+  label: "69 LOVER SALE",
+  startISO: "2026-08-16T09:00:00+05:30",
+  endISO: "2026-08-23T09:00:00+05:30",
+  discountedProjects: ["og", "frozen"],
+  // discounted INR price per plan (month stays at normal price)
+  discountInr: { "1day": 69, "7day": 369 },
+  discountUsd: { "1day": 1, "7day": 5 },
+  qrByAmount: { 69: "/qr-69.png", 369: "/qr-369.png" },
+};

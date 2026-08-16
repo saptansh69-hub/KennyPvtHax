@@ -6,6 +6,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { Toaster } from "./components/ui/toaster";
 import StatusBar from "./components/StatusBar";
 import Navbar from "./components/Navbar";
+import PromoBanner from "./components/PromoBanner";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Pricing from "./pages/Pricing";
@@ -31,6 +32,7 @@ function App() {
             <ScrollToTop />
             <StatusBar />
             <Navbar />
+            <PromoBanner />
             <main>
               <Routes>
                 <Route path="/" element={<Home />} />

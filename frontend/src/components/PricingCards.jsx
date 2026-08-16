@@ -4,6 +4,7 @@ import { Check, ShoppingCart, Crown, Zap } from "lucide-react";
 import { products } from "../mock";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../hooks/use-toast";
+import { effectivePrice } from "../utils/promo";
 
 const currencies = [
   { id: "inr", label: "INR ₹" },
@@ -16,17 +17,20 @@ const PricingCards = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const price = (plan) => (currency === "inr" ? `₹${plan.inr}` : `$${plan.usd}`);
+  const eff = (product, plan) => effectivePrice(product.projectId, plan.id, plan.inr, plan.usd);
+  const fmt = (e) => (currency === "inr" ? `₹${e.inr}` : `$${e.usd}`);
+  const fmtBase = (plan) => (currency === "inr" ? `₹${plan.inr}` : `$${plan.usd}`);
 
   const handleAdd = (product, plan) => {
+    const e = eff(product, plan);
     addItem({
       projectId: product.projectId,
       project: product.project,
       planId: plan.id,
       plan: plan.label,
       duration: plan.duration,
-      inr: plan.inr,
-      usd: plan.usd,
+      inr: e.inr,
+      usd: e.usd,
     });
     toast({
       title: "Added to cart",
@@ -80,10 +84,18 @@ const PricingCards = () => {
                         Popular
                       </span>
                     )}
-                    <p className="font-mono2 text-xs uppercase tracking-widest text-zinc-500">{plan.duration}</p>
+                    {eff(product, plan).sale && (
+                      <span className="absolute left-4 top-4 border border-red-500 bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        69 Sale
+                      </span>
+                    )}
+                    <p className="mt-2 font-mono2 text-xs uppercase tracking-widest text-zinc-500">{plan.duration}</p>
                     <h4 className="mt-1 font-display text-lg font-bold">{plan.label}</h4>
-                    <div className="mt-4 flex items-end gap-1">
-                      <span className="font-display text-4xl font-bold text-white">{price(plan)}</span>
+                    <div className="mt-4 flex items-end gap-2">
+                      <span className="font-display text-4xl font-bold text-white">{fmt(eff(product, plan))}</span>
+                      {eff(product, plan).sale && (
+                        <span className="mb-1 font-display text-lg font-bold text-zinc-600 line-through">{fmtBase(plan)}</span>
+                      )}
                       <span className="mb-1 text-sm text-zinc-500">/ {plan.duration}</span>
                     </div>
                     <ul className="mt-5 space-y-2 text-sm text-zinc-400">

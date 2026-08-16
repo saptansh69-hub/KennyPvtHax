@@ -48,6 +48,17 @@ const Admin = () => {
   const copy = (t) => { navigator.clipboard?.writeText(t); setCopied(t); setTimeout(() => setCopied(""), 1500); };
   const deleteFb = async (id) => { await api.delete(`/admin/feedback/${id}`); setFeedback((p) => p.filter((f) => f.id !== id)); toast({ title: "Review deleted" }); };
 
+  const verifyOrder = async (id) => {
+    try {
+      const res = await api.post(`/admin/orders/${id}/verify`);
+      setOrders((prev) => prev.map((o) => (o.id === id ? res.data : o)));
+      toast({ title: "Payment verified", description: "Key assigned & delivery triggered." });
+      loadAll();
+    } catch (err) {
+      toast({ title: "Verify failed", description: err?.response?.data?.detail || "Try again" });
+    }
+  };
+
   const addKeys = async () => {
     const keys = form.keys.split(/\r?\n/).map((k) => k.trim()).filter(Boolean);
     if (!keys.length) { toast({ title: "Paste at least one key" }); return; }
@@ -110,11 +121,17 @@ const Admin = () => {
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
                       <div>
                         <p className="font-mono2 text-xs text-zinc-400">#{o.id.slice(0, 8).toUpperCase()} · {o.telegram}</p>
-                        <p className="text-xs text-zinc-600">{new Date(o.created_at).toLocaleString()} · {o.method?.toUpperCase()}</p>
+                        <p className="text-xs text-zinc-600">{new Date(o.created_at).toLocaleString()} · {o.method?.toUpperCase()}{o.payment_ref ? ` · UTR ${o.payment_ref}` : ""}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!o.stock_ok && <span className="border border-yellow-600/40 bg-yellow-950/20 px-2 py-0.5 text-[10px] font-bold uppercase text-yellow-500">Out of stock</span>}
-                        <span className={`border px-2 py-0.5 text-[10px] font-bold uppercase ${o.delivered ? "border-green-600/40 bg-green-600/10 text-green-400" : "border-zinc-700 text-zinc-400"}`}>{o.delivered ? "Delivered" : "Awaiting TG"}</span>
+                        {o.status === "awaiting_verification" && (
+                          <button onClick={() => verifyOrder(o.id)} className="inline-flex items-center gap-1.5 bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-500 transition-colors">
+                            <Check className="h-3.5 w-3.5" /> Verify &amp; deliver
+                          </button>
+                        )}
+                        {o.status === "awaiting_verification" && <span className="border border-yellow-600/40 bg-yellow-950/20 px-2 py-0.5 text-[10px] font-bold uppercase text-yellow-500">Verify payment</span>}
+                        {!o.stock_ok && o.status === "paid" && <span className="border border-yellow-600/40 bg-yellow-950/20 px-2 py-0.5 text-[10px] font-bold uppercase text-yellow-500">Out of stock</span>}
+                        {o.status === "paid" && <span className={`border px-2 py-0.5 text-[10px] font-bold uppercase ${o.delivered ? "border-green-600/40 bg-green-600/10 text-green-400" : "border-zinc-700 text-zinc-400"}`}>{o.delivered ? "Delivered" : "Awaiting TG"}</span>}
                         <span className="font-display font-bold text-red-500">{money(o)}</span>
                       </div>
                     </div>
