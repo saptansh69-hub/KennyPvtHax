@@ -1,4 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Header, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -624,6 +626,36 @@ async def admin_keys_summary(admin=Depends(require_admin)):
 
 
 app.include_router(api_router)
+
+
+# ============================================================
+# STATIC FILES & SPA FALLBACK (production)
+# ============================================================
+STATIC_DIR = ROOT_DIR / "static"
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "service": "KennyPvtHax"}
+
+if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
+    # Serve built JS/CSS assets under /static
+    static_assets_dir = STATIC_DIR / "static"
+    if static_assets_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(static_assets_dir)), name="static-assets")
+
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        # API routes (/api/*) are registered above, so they won't reach here
+        file_path = STATIC_DIR / path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        # React Router fallback
+        return FileResponse(str(STATIC_DIR / "index.html"))
+else:
+    @app.get("/")
+    async def root_no_build():
+        return {"message": "KennyPvtHax API online — frontend build not found. Run build.sh first."}
+
 
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
