@@ -1,5 +1,4 @@
-
-build_sh = '''#!/bin/bash
+#!/bin/bash
 set -e
 
 echo "========================================"
@@ -31,9 +30,3 @@ cd ..
 echo "========================================"
 echo " Build complete!"
 echo "========================================"
-'''
-
-with open("/mnt/agents/output/build.sh", "w") as f:
-    f.write(build_sh)
-
-print("build.sh created successfully")
