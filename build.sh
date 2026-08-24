@@ -1,4 +1,5 @@
-#!/bin/bash
+
+build_sh = '''#!/bin/bash
 set -e
 
 echo "========================================"
@@ -6,13 +7,13 @@ echo " KennyPvtHax — Railway Build Script"
 echo "========================================"
 
 # --- 1. Build Frontend ---
-echo "[1/4] Installing frontend dependencies..."
+echo "[1/4] Installing frontend dependencies with npm..."
 cd frontend
-yarn install --frozen-lockfile
+npm install
 
 echo "[2/4] Building frontend for production..."
 # Empty REACT_APP_BACKEND_URL means API calls go to /api/ (same domain)
-REACT_APP_BACKEND_URL="" yarn build
+REACT_APP_BACKEND_URL="" npm run build
 cd ..
 
 # --- 2. Copy build to backend/static ---
@@ -22,7 +23,7 @@ mkdir -p backend/static
 cp -r frontend/build/* backend/static/
 
 # --- 3. Install backend dependencies ---
-echo "[4/4] Installing backend dependencies..."
+echo "[4/4] Installing backend Python dependencies..."
 cd backend
 pip install -r requirements.txt
 cd ..
@@ -30,3 +31,9 @@ cd ..
 echo "========================================"
 echo " Build complete!"
 echo "========================================"
+'''
+
+with open("/mnt/agents/output/build.sh", "w") as f:
+    f.write(build_sh)
+
+print("build.sh created successfully")
