@@ -8,7 +8,7 @@ echo "========================================"
 # --- 1. Build Frontend ---
 echo "[1/4] Installing frontend dependencies with npm..."
 cd frontend
-npm install
+npm install --legacy-peer-deps
 
 echo "[2/4] Building frontend for production..."
 # Empty REACT_APP_BACKEND_URL means API calls go to /api/ (same domain)
