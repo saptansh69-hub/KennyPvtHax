@@ -98,11 +98,17 @@ let webpackConfig = {
         ],
       };
 
-      // Add health check plugin to webpack if enabled
-      if (config.enableHealthCheck && healthPluginInstance) {
-        webpackConfig.plugins.push(healthPluginInstance);
-      }
-      return webpackConfig;
+  // Add health check plugin to webpack if enabled
+          if (config.enableHealthCheck && healthPluginInstance) {
+            webpackConfig.plugins.push(healthPluginInstance);
+          }
+
+          // Disable TypeScript checker plugin to avoid ajv-keywords version conflicts
+          webpackConfig.plugins = webpackConfig.plugins.filter(
+            (plugin) => plugin.constructor.name !== "ForkTsCheckerWebpackPlugin"
+          );
+
+          return webpackConfig;
     },
   },
 };
