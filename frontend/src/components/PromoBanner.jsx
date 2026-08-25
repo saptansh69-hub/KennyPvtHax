@@ -32,9 +32,6 @@ const PromoBanner = () => {
         <span className="inline-flex items-center gap-2 font-display text-sm font-bold tracking-wide">
           <Flame className="h-4 w-4 animate-flicker" /> {promo.label}
         </span>
-        <span className="hidden text-sm text-red-50/90 sm:inline">
-          OG &amp; Frozen Fire from <b className="text-white">₹69</b> — grab a key before it ends
-        </span>
         <span className="inline-flex items-center gap-2">
           <Timer className="h-4 w-4 text-red-100" />
           <span className="flex items-center gap-1.5">

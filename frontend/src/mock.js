@@ -1,124 +1,68 @@
-// Mock data for KennyPvtHax — frontend-only teaser (to be replaced by backend)
+// Site content. Catalog is intentionally empty — fill in the new product data here.
+// Every export below is consumed by components, so keep the shapes even when empty.
+
+// --- Branding ---
+// siteNameAccent renders in the accent colour immediately after siteName.
+export const siteName = "New Project";
+export const siteNameAccent = "";
+export const siteTagline = "";
+export const siteDescription = "";
 
 export const serverStatus = {
   status: "ONLINE",
   statusLabel: "All systems operational",
-  lastPatch: "2025-07-14T09:32:00Z",
-  version: "V-4.5",
-  undetected: true,
-  activeUsers: 2847,
+  lastUpdate: null,
+  version: "",
+  activeUsers: 0,
 };
 
 export const navLinks = [
   { label: "Home", to: "/" },
-  { label: "Projects", to: "/#projects" },
+  { label: "Products", to: "/#projects" },
   { label: "Features", to: "/features" },
   { label: "Pricing", to: "/pricing" },
   { label: "Reviews", to: "/#feedback" },
 ];
 
-export const projects = [
-  {
-    id: "og",
-    code: "01",
-    name: "OG Cheats",
-    tagline: "The market standard",
-    description:
-      "Featuring the market's most common UI. Clean, reliable and battle-tested — everything a player expects with rock-solid stability.",
-    image: "/og-cheats.jpg",
-    demoVideo: "https://youtu.be/haxLwKBHczk",
-    features: ["Aimbot & ESP", "Standard menu UI", "Stable runtime", "Anti-ban base"],
-    accent: "#7fff00",
-    hasAdmin: false,
-  },
-  {
-    id: "frozen",
-    code: "02",
-    name: "Frozen Fire",
-    tagline: "Advanced & stream-safe",
-    description:
-      "An advanced version of the UI with the ability to hide ESP while recording. Built for creators who need to stay invisible on stream.",
-    image: "/frozen-fire.jpg",
-    demoVideo: "https://youtu.be/vZdVazJzRAk",
-    features: ["Hide ESP while recording", "Advanced UI", "Stream mode", "Priority updates"],
-    accent: "#2fa8ff",
-    hasAdmin: false,
-  },
-  {
-    id: "admin",
-    code: "03",
-    name: "Kenny Admin",
-    tagline: "True potential — demo only",
-    description:
-      "The best of all. A display of true potential and power, only for those who want to prove they are the best. Gives all imaginary powers to beat other hackers — strictly for demonstration and fun purposes.",
-    image: "/kenny-admin.webp",
-    demoVideo: "https://youtu.be/oZnN0pWfRdU",
-    features: ["God-tier control", "Anti-hacker override", "Demonstration mode", "Exclusive access"],
-    accent: "#e50914",
-    hasAdmin: true,
-  },
-];
+// Each entry: { id, code, name, tagline, description, image, demoVideo, features[], accent, hasAdmin }
+export const projects = [];
 
-// Pricing plans. OG & Frozen share the same standard tiers. Admin is weekly-only.
+// Plan tiers keyed by group. Each plan: { id, label, duration, inr, usd, popular }
 export const pricingPlans = {
-  standard: [
-    { id: "1day", label: "1 Day", duration: "24 hours", inr: 120, usd: 1, popular: false },
-    { id: "7day", label: "7 Day", duration: "1 week", inr: 600, usd: 6, popular: true },
-    { id: "month", label: "Month Access", duration: "30 days", inr: 1500, usd: 15, popular: false },
-  ],
-  admin: [
-    { id: "admin-week", label: "Admin Key", duration: "1 week subscription", inr: 1000, usd: 10, popular: true },
-  ],
+  standard: [],
+  admin: [],
 };
 
 // Buildable product list = each project x its available plans
-export const products = [
-  { project: "OG Cheats", projectId: "og", plans: pricingPlans.standard },
-  { project: "Frozen Fire", projectId: "frozen", plans: pricingPlans.standard },
-  { project: "Kenny Admin", projectId: "admin", plans: pricingPlans.admin },
-];
+export const products = [];
 
-export const coreFeatures = [
-  { code: "01", title: "Kernel-level support", desc: "External kernel architecture for a stable, low-footprint runtime." },
-  { code: "02", title: "Anti-cheat bypass", desc: "Continuously updated evasion layer that stays ahead of detection." },
-  { code: "03", title: "Real-time protection", desc: "Live guard that pauses risky actions automatically." },
-  { code: "04", title: "Around-the-clock support", desc: "24/7 Telegram support for keys, setup and troubleshooting." },
-  { code: "05", title: "Custom features", desc: "Configurable aimbot, ESP and visuals tuned to your playstyle." },
-  { code: "06", title: "Stream mode", desc: "Hide overlays while recording so your gameplay stays clean." },
-];
+// Each entry: { code, title, desc }
+export const coreFeatures = [];
 
-export const showcaseStats = [
-  { value: "2.8K+", label: "Active users" },
-  { value: "99.9%", label: "Uptime" },
-  { value: "< 2h", label: "Patch turnaround" },
-  { value: "24/7", label: "Telegram support" },
-];
+// Each entry: { value, label }
+export const showcaseStats = [];
 
-export const faqs = [
-  { q: "How do I receive my key after payment?", a: "Your key is generated instantly after checkout and delivered to the Telegram username you provide at checkout." },
-  { q: "Which games are supported?", a: "KennyPvtHax supports PUBG Mobile (Global) and BGMI (India) across current versions." },
-  { q: "Is Kenny Admin real?", a: "Kenny Admin is a demonstration build made for fun. Its 'imaginary powers' are for showcasing capability only." },
-  { q: "What payment methods do you accept?", a: "We accept UPI (India) and Stripe card payments (international). More options coming soon." },
-];
+// Each entry: { q, a }
+export const faqs = [];
 
-export const telegramHandle = "@KennyPvtHacks";
-export const telegramUrl = "https://t.me/KennyPvtHacks";
-export const ownerHandle = "@CrimeCell";
-export const ownerUrl = "https://t.me/CrimeCell";
-export const logoSrc = "/kenny-logo.jpg";
+// --- Contact ---
+export const telegramHandle = "";
+export const telegramUrl = "";
+export const ownerHandle = "";
+export const ownerUrl = "";
+export const logoSrc = "";
 
-// Video links
-export const heroBgVideo = "https://youtu.be/COa9LDmZBzs"; // cyberpunk background
-export const featuredShowcaseVideo = "https://youtu.be/T63ZwaEUPCw"; // main gameplay reel
+// --- Media ---
+export const heroBgVideo = "";
+export const featuredShowcaseVideo = "";
 
-// 69 LOVER SALE — 7-day countdown starting today 9AM IST
+// Promo/sale. Inactive while startISO === endISO.
 export const promo = {
-  label: "69 LOVER SALE",
-  startISO: "2026-08-16T09:00:00+05:30",
-  endISO: "2026-08-23T09:00:00+05:30",
-  discountedProjects: ["og", "frozen"],
-  // discounted INR price per plan (month stays at normal price)
-  discountInr: { "1day": 69, "7day": 369 },
-  discountUsd: { "1day": 1, "7day": 5 },
-  qrByAmount: { 69: "/qr-69.png", 369: "/qr-369.png" },
+  label: "",
+  startISO: "1970-01-01T00:00:00Z",
+  endISO: "1970-01-01T00:00:00Z",
+  discountedProjects: [],
+  discountInr: {},
+  discountUsd: {},
+  qrByAmount: {},
 };

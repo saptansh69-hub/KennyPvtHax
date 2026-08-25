@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, ShoppingCart, User, LogIn, ShieldAlert } from "lucide-react";
-import { navLinks, logoSrc } from "../mock";
+import { navLinks, logoSrc, siteName, siteNameAccent } from "../mock";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "./ui/button";
@@ -42,9 +42,9 @@ const Navbar = () => {
       <nav className="mx-auto max-w-7xl px-6">
         <div className="flex h-16 items-center justify-between">
           <button onClick={() => handleNav("/")} className="flex items-center gap-2.5 group">
-            <img src={logoSrc} alt="KennyPvtHax" className="h-9 w-9 rounded-md border border-red-600/50 object-cover" />
+            {logoSrc && <img src={logoSrc} alt={siteName} className="h-9 w-9 rounded-md border border-red-600/50 object-cover" />}
             <span className="font-display text-lg font-bold tracking-tight">
-              Kenny<span className="text-red-500">PvtHax</span>
+              {siteName}<span className="text-red-500">{siteNameAccent}</span>
             </span>
           </button>
 

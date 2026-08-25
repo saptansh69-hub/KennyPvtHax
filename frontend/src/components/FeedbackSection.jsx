@@ -94,7 +94,7 @@ const FeedbackSection = () => {
             What the <span className="text-red-500">squad</span> says
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm text-zinc-500">
-            Real reviews from players running KennyPvtHax across PUBGM &amp; BGMI.
+            Real reviews from verified customers.
           </p>
         </div>
 

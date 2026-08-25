@@ -13,7 +13,7 @@ const Pricing = () => {
             Pick your <span className="text-red-500">key.</span>
           </h1>
           <p className="mx-auto mt-4 max-w-lg text-sm text-zinc-500">
-            OG Cheats and Frozen Fire share the same tiers. Kenny Admin is a weekly subscription. Keys are delivered instantly on Telegram.
+            Keys are delivered instantly on Telegram.
           </p>
         </div>
 
