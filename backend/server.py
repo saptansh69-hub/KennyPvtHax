@@ -21,11 +21,22 @@ import requests
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+def _require_env(name: str) -> str:
+    val = (os.environ.get(name) or '').strip()
+    if not val:
+        raise RuntimeError(
+            f"Required environment variable {name} is not set. "
+            "Add it to the Railway service variables (see backend/.env.example)."
+        )
+    return val
 
-JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-secret')
+
+mongo_url = _require_env('MONGO_URL')
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ.get('DB_NAME') or 'appdb']
+
+# A predictable signing key lets anyone mint an admin token, so this must be set.
+JWT_SECRET = _require_env('JWT_SECRET')
 JWT_ALGO = 'HS256'
 JWT_EXP_DAYS = 30
 
@@ -35,7 +46,7 @@ LOW_STOCK_THRESHOLD = int(os.environ.get('LOW_STOCK_THRESHOLD', '3') or 3)
 PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
 ADMIN_EMAILS = [e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()]
 ADMIN_TELEGRAMS = [t.strip() if t.strip().startswith('@') else '@' + t.strip()
-                   for t in os.environ.get('ADMIN_TELEGRAMS', '@CrimeCell').split(',') if t.strip()]
+                   for t in os.environ.get('ADMIN_TELEGRAMS', '').split(',') if t.strip()]
 
 BOT_USERNAME = None  # resolved at startup
 
@@ -98,12 +109,12 @@ def _tg_send(chat_id, text: str) -> bool:
 
 
 def _order_keys_text(order: dict) -> str:
-    lines = ["<b>KennyPvtHax — your license key(s)</b>",
+    lines = ["<b>Your license key(s)</b>",
              f"Order #{order['id'][:8].upper()}", ""]
     for k in order.get("keys", []):
         val = k.get("key") or "⏳ processing (restocking soon)"
         lines.append(f"• <b>{k['project']}</b> — {k['plan']} ({k['duration']})\n  <code>{val}</code>")
-    lines.append("\nKeep your key private. Support: @CrimeCell")
+    lines.append("\nKeep your key private.")
     return "\n".join(lines)
 
 
@@ -245,7 +256,7 @@ class BulkKeysInput(BaseModel):
 # ---------- Routes ----------
 @api_router.get("/")
 async def root():
-    return {"message": "KennyPvtHax API online"}
+    return {"message": "API online"}
 
 
 @api_router.get("/config")
@@ -308,7 +319,7 @@ async def forgot_password(data: ForgotInput):
     if tg:
         chat = await db.telegram_chats.find_one({"username": tg.lower()})
         if chat and _tg_send(chat["chat_id"],
-                             f"<b>KennyPvtHax password reset</b>\nYour reset code:\n<code>{token}</code>\n\nEnter it on the site to set a new password. Expires in 30 min."):
+                             f"<b>Password reset</b>\nYour reset code:\n<code>{token}</code>\n\nEnter it on the site to set a new password. Expires in 30 min."):
             return {"found": True, "delivery": "telegram"}
     # Fallback (delivery mocked): return token so the flow can complete
     return {"found": True, "reset_token": token, "delivery": "mocked"}
@@ -372,7 +383,7 @@ async def create_order(data: OrderInput, current=Depends(get_current_user)):
         "telegram": telegram, "email": (data.email or "").strip() or None,
         "method": data.method, "currency": data.currency,
         "payment_ref": (data.payment_ref or "").strip() or None,
-        "items": [i.dict() for i in data.items], "keys": [],
+        "items": [i.model_dump() for i in data.items], "keys": [],
         "total_inr": total_inr, "total_usd": total_usd,
         "status": "awaiting_verification" if data.method == "upi" else "paid",
         "delivered": False, "stock_ok": True, "created_at": now_iso(),
@@ -474,7 +485,7 @@ async def telegram_webhook(request: Request):
         keys = [l.strip() for l in lines[1:] if l.strip()]
         if not keys:
             await asyncio.to_thread(_tg_send, chat_id,
-                "Usage:\n<code>/addkeys [project] [plan]</code>\nthen one key per line.\n\nExample:\n<code>/addkeys og 1day\nKENNY-AAAA-BBBB\nKENNY-CCCC-DDDD</code>\n\nprojects: og, frozen, admin (or omit for any)\nplans: 1day, 7day, month, admin-week (or omit for any)")
+                "Usage:\n<code>/addkeys [product] [plan]</code>\nthen one key per line.")
         else:
             added, skipped = await add_keys_to_inventory(project_id, plan_id, keys)
             avail = await db.keys_inventory.count_documents({"used": False})
@@ -493,7 +504,7 @@ async def telegram_webhook(request: Request):
             b = buckets.setdefault(k, {"a": 0, "u": 0})
             b["u" if r["_id"].get("u") else "a"] += r["c"]
         orders_ct = await db.orders.count_documents({})
-        lines = ["<b>📦 KennyPvtHax stock</b>"]
+        lines = ["<b>📦 Stock</b>"]
         for k, v in sorted(buckets.items()):
             lines.append(f"• {k}: <b>{v['a']}</b> left / {v['u']} sold")
         if len(lines) == 1:
@@ -557,12 +568,12 @@ async def telegram_webhook(request: Request):
                 else:
                     ok = await deliver_order_to_chat(order, chat_id)
                     if not ok:
-                        await asyncio.to_thread(_tg_send, chat_id, "Could not fetch your key. Please contact @CrimeCell.")
+                        await asyncio.to_thread(_tg_send, chat_id, "Could not fetch your key. Please contact support.")
             else:
-                await asyncio.to_thread(_tg_send, chat_id, "Welcome to <b>KennyPvtHax</b>! Order not found — contact @CrimeCell for help.")
+                await asyncio.to_thread(_tg_send, chat_id, "Order not found — contact support for help.")
         else:
             await asyncio.to_thread(_tg_send, chat_id,
-                "Welcome to <b>KennyPvtHax</b>! Buy a key on the site, then tap the delivery link to receive it here instantly.")
+                "Welcome! Buy a key on the site, then tap the delivery link to receive it here instantly.")
     return {"ok": True}
 
 
@@ -635,7 +646,7 @@ STATIC_DIR = ROOT_DIR / "static"
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "ok", "service": "KennyPvtHax"}
+    return {"status": "ok", "service": "api"}
 
 if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
     # Serve built JS/CSS assets under /static
@@ -643,22 +654,34 @@ if STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists():
     if static_assets_dir.exists():
         app.mount("/static", StaticFiles(directory=str(static_assets_dir)), name="static-assets")
 
+    _STATIC_ROOT = STATIC_DIR.resolve()
+
     @app.get("/{path:path}")
     async def serve_spa(path: str):
-        # API routes (/api/*) are registered above, so they won't reach here
-        file_path = STATIC_DIR / path
-        if file_path.exists() and file_path.is_file():
-            return FileResponse(str(file_path))
+        # Unmatched /api/* should 404 as JSON, not fall through to the SPA shell
+        if path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        if path:
+            candidate = (_STATIC_ROOT / path).resolve()
+            if candidate.is_relative_to(_STATIC_ROOT) and candidate.is_file():
+                return FileResponse(str(candidate))
         # React Router fallback
-        return FileResponse(str(STATIC_DIR / "index.html"))
+        return FileResponse(str(_STATIC_ROOT / "index.html"))
 else:
     @app.get("/")
     async def root_no_build():
-        return {"message": "KennyPvtHax API online — frontend build not found. Run build.sh first."}
+        return {"message": "API online — frontend build not found. Run build.sh first."}
 
 
-app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"],
-                   allow_methods=["*"], allow_headers=["*"])
+# Production serves the SPA same-origin, so CORS only matters for local dev.
+CORS_ORIGINS = [o.strip() for o in os.environ.get('CORS_ORIGINS', '').split(',') if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS or ["http://localhost:3000"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -666,16 +689,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 @app.on_event("startup")
 async def startup_tasks():
     global BOT_USERNAME
-    # seed feedback
-    if await db.feedback.count_documents({}) == 0:
-        seed = [
-            {"id": str(uuid.uuid4()), "user_id": None, "name": "ShadowKingBGMI", "rating": 5, "image": None, "message": "Frozen Fire's hide-ESP-while-recording is unreal. Streamed a whole session, zero flags.", "approved": True, "created_at": now_iso()},
-            {"id": str(uuid.uuid4()), "user_id": None, "name": "AceOfConqueror", "rating": 5, "image": None, "message": "Got my key on Telegram in under a minute. OG Cheats runs buttery smooth on my device.", "approved": True, "created_at": now_iso()},
-            {"id": str(uuid.uuid4()), "user_id": None, "name": "NeonReaper", "rating": 4, "image": None, "message": "Kenny Admin is pure chaos in the best way. Insane for demonstration lobbies.", "approved": True, "created_at": now_iso()},
-            {"id": str(uuid.uuid4()), "user_id": None, "name": "SilentStormX", "rating": 5, "image": None, "message": "Patched within hours of the last BGMI update. Support on Telegram is legit 24/7.", "approved": True, "created_at": now_iso()},
-        ]
-        await db.feedback.insert_many(seed)
-
     if TELEGRAM_BOT_TOKEN:
         try:
             me = await asyncio.to_thread(lambda: requests.get(

@@ -4,6 +4,7 @@ import { Trash2, ShoppingCart, Send, CreditCard, Smartphone, ArrowRight, CheckCi
 import { useCart } from "../context/CartContext";
 import { useToast } from "../hooks/use-toast";
 import { api } from "../services/api";
+import { qrForAmount } from "../utils/promo";
 
 const Checkout = () => {
   const { items, removeItem, totalInr, totalUsd, clearCart } = useCart();
@@ -21,7 +22,7 @@ const Checkout = () => {
   const [paymentRef, setPaymentRef] = useState("");
 
   const total = currency === "inr" ? `₹${totalInr}` : `$${totalUsd}`;
-  const qrSrc = totalInr === 69 ? "/qr-69.png" : totalInr === 369 ? "/qr-369.png" : null;
+  const qrSrc = qrForAmount(totalInr);
 
   const copyKey = (key) => {
     navigator.clipboard?.writeText(key);

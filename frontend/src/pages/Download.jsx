@@ -4,16 +4,14 @@ import { Download as DownloadIcon, Send, Smartphone, ShieldCheck, KeyRound } fro
 import { serverStatus, telegramUrl } from "../mock";
 
 const steps = [
-  { code: "01", title: "Buy a key", desc: "Choose your project and duration on the pricing page, then check out with UPI or card." },
+  { code: "01", title: "Buy a key", desc: "Choose your product and duration on the pricing page, then check out with UPI or card." },
   { code: "02", title: "Get it on Telegram", desc: "Your key is generated instantly and delivered to your Telegram username." },
-  { code: "03", title: "Download the loader", desc: "Grab the latest build below and inject following the in-app guide." },
-  { code: "04", title: "Play", desc: "Enter your key in the loader and drop into PUBGM or BGMI." },
+  { code: "03", title: "Download", desc: "Grab the latest build below." },
+  { code: "04", title: "Activate", desc: "Enter your key to activate." },
 ];
 
-const builds = [
-  { name: "PUBG Mobile Global", tag: "Android 64-bit", size: "38 MB" },
-  { name: "BGMI (India)", tag: "Android 64-bit", size: "38 MB" },
-];
+// Each entry: { name, tag, size }
+const builds = [];
 
 const Download = () => {
   const navigate = useNavigate();
@@ -29,10 +27,11 @@ const Download = () => {
           <div className="mt-5 inline-flex items-center gap-3 border border-zinc-800 bg-zinc-900/60 px-4 py-2 font-mono2 text-xs">
             <span className="live-dot inline-block h-2 w-2 rounded-full bg-green-400" />
             <span className="text-green-400">{serverStatus.status}</span>
-            <span className="text-zinc-500">· {serverStatus.version} · undetected</span>
+            {serverStatus.version && <span className="text-zinc-500">· {serverStatus.version}</span>}
           </div>
         </div>
 
+        {builds.length > 0 && (
         <div className="mt-12 grid gap-4 sm:grid-cols-2">
           {builds.map((b) => (
             <div key={b.name} className="flex items-center justify-between border border-zinc-800 bg-zinc-900/40 p-5 clip-corner">
@@ -54,10 +53,11 @@ const Download = () => {
             </div>
           ))}
         </div>
+        )}
 
         <div className="mt-6 flex items-center gap-3 border border-red-900/40 bg-red-950/20 p-4 text-sm text-zinc-400 clip-corner">
           <KeyRound className="h-5 w-5 shrink-0 text-red-500" />
-          A valid key is required to run any build. No key yet? Grab one from pricing — it arrives on Telegram instantly.
+          A valid key is required. No key yet? Grab one from pricing — it arrives on Telegram instantly.
         </div>
 
         <div className="mt-16">
