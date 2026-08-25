@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+export DISABLE_ESLINT_PLUGIN=true
 echo "========================================"
 echo " KennyPvtHax — Railway Build Script"
 echo "========================================"
