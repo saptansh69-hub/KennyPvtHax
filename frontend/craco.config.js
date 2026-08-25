@@ -99,6 +99,7 @@ let webpackConfig = {
       };
 
   // Add health check plugin to webpack if enabled
+          // Add health check plugin to webpack if enabled
           if (config.enableHealthCheck && healthPluginInstance) {
             webpackConfig.plugins.push(healthPluginInstance);
           }
@@ -107,6 +108,9 @@ let webpackConfig = {
           webpackConfig.plugins = webpackConfig.plugins.filter(
             (plugin) => plugin.constructor.name !== "ForkTsCheckerWebpackPlugin"
           );
+
+          // Skip production minification to bypass a broken ajv-keywords chain
+          webpackConfig.optimization.minimize = false;
 
           return webpackConfig;
     },
