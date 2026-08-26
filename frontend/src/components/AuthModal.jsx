@@ -27,7 +27,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
           password: form.password,
           ...(method === "email" ? { email: form.email } : { telegram: form.telegram }),
         });
-        toast({ title: "Welcome", description: "Your account is ready." });
+        toast({ title: "Welcome to KennyPvtHax", description: "Your account is ready." });
         onSuccess?.(); onClose();
       } else if (mode === "login") {
         await login({ identifier: form.identifier, password: form.password });
@@ -71,7 +71,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
           <X className="h-5 w-5" />
         </button>
         <div className="relative">
-          <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">account / access</p>
+          <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">Kenny system / access</p>
           <h2 className="mt-2 font-display text-2xl font-bold">{title}</h2>
           <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
 

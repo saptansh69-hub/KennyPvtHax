@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Send, User } from "lucide-react";
-import { navLinks, telegramHandle, telegramUrl, ownerHandle, ownerUrl, logoSrc, siteName, siteNameAccent, siteDescription } from "../mock";
+import { navLinks, telegramHandle, telegramUrl, ownerHandle, ownerUrl, logoSrc } from "../mock";
 
 const Footer = () => {
   return (
@@ -11,14 +11,14 @@ const Footer = () => {
         <div className="grid gap-10 md:grid-cols-4">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2.5">
-              {logoSrc && <img src={logoSrc} alt={siteName} className="h-9 w-9 rounded-md border border-red-600/50 object-cover" />}
+              <img src={logoSrc} alt="KennyPvtHax" className="h-9 w-9 rounded-md border border-red-600/50 object-cover" />
               <span className="font-display text-lg font-bold">
-                {siteName}<span className="text-red-500">{siteNameAccent}</span>
+                Kenny<span className="text-red-500">PvtHax</span>
               </span>
             </div>
-            {siteDescription && (
-              <p className="mt-4 max-w-sm text-sm text-zinc-500">{siteDescription}</p>
-            )}
+            <p className="mt-4 max-w-sm text-sm text-zinc-500">
+              Premium PUBG Mobile &amp; BGMI plugins. Kernel-level capability, stable operation and instant key delivery via Telegram.
+            </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <a href={telegramUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 border border-red-600/50 bg-red-600/10 px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-600/20 transition-colors clip-corner">
@@ -50,12 +50,14 @@ const Footer = () => {
               <li>Terms of Service</li>
               <li>Refund Policy</li>
               <li>Fair Use</li>
+              <li className="text-zinc-600">For demonstration & entertainment</li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-zinc-800/80 pt-6 md:flex-row">
-          <p className="font-mono2 text-xs text-zinc-600">© {new Date().getFullYear()} {siteName}{siteNameAccent}</p>
+          <p className="font-mono2 text-xs text-zinc-600">© {new Date().getFullYear()} KennyPvtHax · Kernel system / 01</p>
+          <p className="font-mono2 text-xs text-zinc-600">Built for PUBGM & BGMI</p>
         </div>
       </div>
     </footer>

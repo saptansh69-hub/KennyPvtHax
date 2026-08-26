@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, KeyRound, Send } from "lucide-react";
-import { coreFeatures, showcaseStats, telegramUrl, siteName, siteNameAccent, siteTagline, siteDescription, logoSrc, heroBgVideo } from "../mock";
+import { ArrowRight, KeyRound, Send, Cpu, ShieldCheck, Radio, Video } from "lucide-react";
+import { coreFeatures, showcaseStats, telegramUrl } from "../mock";
 import ProjectsSection from "../components/ProjectsSection";
 import DemosSection from "../components/DemosSection";
 import FeedbackSection from "../components/FeedbackSection";
@@ -13,29 +13,23 @@ const Home = () => {
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {heroBgVideo && (
-          <>
-            <video className="hero-video" autoPlay loop muted playsInline>
-              <source src={heroBgVideo} type="video/mp4" />
-            </video>
-            <div className="hero-video-overlay" />
-          </>
-        )}
+        <video className="hero-video" autoPlay loop muted playsInline poster="/kenny-logo.jpg">
+          <source src="/cyber-city.mp4" type="video/mp4" />
+        </video>
+        <div className="hero-video-overlay" />
         <div className="grid-bg absolute inset-0 opacity-30" />
         <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-20 md:pb-32 md:pt-28">
           <div className="animate-float-up">
-            {logoSrc && (
-              <img src={logoSrc} alt={siteName} className="h-14 w-14 rounded-lg border border-red-600/50 object-cover shadow-lg shadow-red-900/40" />
-            )}
+            <img src="/kenny-logo.jpg" alt="KennyPvtHax" className="h-14 w-14 rounded-lg border border-red-600/50 object-cover shadow-lg shadow-red-900/40" />
             <h1 className="mt-5 font-display text-5xl font-bold leading-[0.9] tracking-tight md:text-7xl lg:text-8xl">
-              <span className="name-wrap"><span className="animated-name">{siteName}{siteNameAccent}</span></span>
+              <span className="name-wrap"><span className="animated-name">KennyPvtHax</span></span>
             </h1>
-            {siteTagline && (
-              <p className="mt-6 font-tech text-lg text-zinc-400 md:text-2xl">{siteTagline}</p>
-            )}
-            {siteDescription && (
-              <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-500 md:text-base">{siteDescription}</p>
-            )}
+            <p className="mt-6 font-tech text-lg text-zinc-400 md:text-2xl">
+              Kernel-level capability for PUBGM &amp; BGMI. Stable operation. Instant delivery.
+            </p>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-zinc-500 md:text-base">
+              Premium plugins engineered to run in the system kernel while you stay in control at the interface. Undetected, stream-safe and updated within hours of every patch.
+            </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <button
@@ -61,6 +55,28 @@ const Home = () => {
             </div>
           </div>
 
+          {/* Runtime status card */}
+          <div className="mt-16 grid gap-4 md:grid-cols-4">
+            {[
+              { icon: Cpu, label: "Kernel core", value: "Running", sub: "Stable status" },
+              { icon: ShieldCheck, label: "Anti-cheat", value: "Bypassed", sub: "Evasion active" },
+              { icon: Radio, label: "Stream mode", value: "Enabled", sub: "ESP concealed" },
+              { icon: Video, label: "Display layer", value: "Clean", sub: "Overlay hidden" },
+            ].map((s, i) => (
+              <div
+                key={s.label}
+                className="tech-card group p-5 clip-corner"
+                style={{ animation: `float-up 0.6s ease ${0.2 + i * 0.08}s both` }}
+              >
+                <span className="grid h-10 w-10 place-items-center border border-red-600/40 bg-red-600/10 transition-colors group-hover:bg-red-600/20">
+                  <s.icon className="h-5 w-5 text-red-500" />
+                </span>
+                <p className="mt-4 font-mono2 text-[11px] uppercase tracking-widest text-zinc-500">{s.label}</p>
+                <p className="mt-1 font-display text-xl font-bold text-white">{s.value}</p>
+                <p className="text-xs text-zinc-500">{s.sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -77,7 +93,7 @@ const Home = () => {
             <div>
               <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">Core capabilities</p>
               <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-5xl">
-                What you get.
+                Control at the interface.<br />Run in the <span className="text-red-500">kernel.</span>
               </h2>
             </div>
             <button
@@ -121,7 +137,7 @@ const Home = () => {
         <div className="relative mx-auto max-w-3xl px-6 text-center">
           <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">Ready to start</p>
           <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-5xl">
-            Get started.
+            Get the latest KennyPvtHax build.
           </h2>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <button

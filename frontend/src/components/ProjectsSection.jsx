@@ -11,7 +11,7 @@ const ProjectsSection = () => {
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">catalog</p>
+            <p className="font-mono2 text-xs uppercase tracking-widest text-red-500">Kenny system / projects</p>
             <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-5xl">
               Three builds. <span className="text-red-500">One arsenal.</span>
             </h2>

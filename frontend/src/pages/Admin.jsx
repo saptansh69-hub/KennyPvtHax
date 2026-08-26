@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { useToast } from "../hooks/use-toast";
 
-const PROJECT_OPTS = [["", "Any project"]];
+const PROJECT_OPTS = [["", "Any project"], ["og", "OG Cheats"], ["frozen", "Frozen Fire"], ["admin", "Kenny Admin"]];
 const PLAN_OPTS = [["", "Any plan"], ["1day", "1 Day"], ["7day", "7 Day"], ["month", "Month"], ["admin-week", "Admin Week"]];
 
 const Stat = ({ icon: Icon, label, value }) => (
@@ -84,7 +84,7 @@ const Admin = () => {
       <div className="relative mx-auto max-w-6xl px-6 py-14">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center border border-red-600/50 bg-red-600/10 clip-corner"><ShieldAlert className="h-6 w-6 text-red-500" /></span>
-          <div><h1 className="font-display text-2xl font-bold">Admin Panel</h1><p className="font-mono2 text-xs text-zinc-500">control center</p></div>
+          <div><h1 className="font-display text-2xl font-bold">Admin Panel</h1><p className="font-mono2 text-xs text-zinc-500">KennyPvtHax control center</p></div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3 font-mono2 text-xs">
@@ -167,7 +167,7 @@ const Admin = () => {
                         {PLAN_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                       </select></label>
                   </div>
-                  <textarea value={form.keys} onChange={(e) => setForm((f) => ({ ...f, keys: e.target.value }))} rows={8} placeholder={"KEY-XXXX-XXXX\nKEY-YYYY-YYYY"} className="mt-3 w-full resize-none border border-zinc-800 bg-zinc-950 px-3 py-2.5 font-mono2 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-red-600/60" />
+                  <textarea value={form.keys} onChange={(e) => setForm((f) => ({ ...f, keys: e.target.value }))} rows={8} placeholder={"KENNY-XXXX-XXXX\nKENNY-YYYY-YYYY"} className="mt-3 w-full resize-none border border-zinc-800 bg-zinc-950 px-3 py-2.5 font-mono2 text-sm text-white outline-none placeholder:text-zinc-700 focus:border-red-600/60" />
                   <button onClick={addKeys} disabled={busy} className="mt-3 inline-flex w-full items-center justify-center gap-2 bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition-colors disabled:opacity-50 clip-corner">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Add to inventory
                   </button>
